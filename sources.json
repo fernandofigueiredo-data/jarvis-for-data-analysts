@@ -1,0 +1,4 @@
+[
+  {"nome": "Educadados", "url": "https://www.educadados.com.br/blog", "modo": "html", "padrao_link": "^/blog/[^/]+$"},
+  {"nome": "Data Hackers", "url": "https://www.datahackers.news/", "modo": "html", "padrao_link": "^/p/[^/]+$"}
+]

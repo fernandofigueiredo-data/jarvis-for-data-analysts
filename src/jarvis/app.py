@@ -1,0 +1,395 @@
+"""O orquestrador: liga microfone, rota rápida, cérebro, fala, timers, notícias e o painel."""
+import asyncio
+import queue
+import subprocess
+import threading
+import time
+
+import psutil
+import uvicorn
+
+from jarvis import config, fillers, news, router, telemetry
+from jarvis.audio.recorder import Recorder
+from jarvis.audio.stt import stt
+from jarvis.audio.tts import speaker
+from jarvis.brain.agent import Brain
+from jarvis.events import bus
+from jarvis.mac.timers import Timer, timers
+from jarvis.memory import memory
+from jarvis.wake import WINDOW_S, is_stop, split_wake
+
+CHIME = "/System/Library/Sounds/Tink.aiff"
+ALARM = "/System/Library/Sounds/Glass.aiff"
+AGENTS = [("coding", "Agente de Código"), ("research", "Agente de Pesquisa"), ("memory", "Agente de Memória"),
+          ("browser", "Agente de Navegação"), ("task", "Agente de Tarefas"), ("system", "Agente de Sistema")]
+QUICK = {
+    "briefing": "Faça meu briefing executivo de hoje: use agenda_today, timer_list e news_latest (3 manchetes). "
+                "No máximo cinco frases faladas.",
+    "news": "Quais as últimas notícias das minhas fontes?",
+    "agenda": "O que tenho na agenda hoje?",
+    "new_task": "Quero criar uma tarefa. Pergunte o que é, em uma frase.",
+    "voice": None,
+}
+
+
+def agent_for(tool: str) -> str:
+    t = tool.lower()
+    if any(k in t for k in ("websearch", "webfetch", "news", "search", "fetch")):
+        return "research"
+    if any(k in t for k in ("open_url", "chrome", "browser", "playwright")):
+        return "browser"
+    if any(k in t for k in ("remember", "recall")):
+        return "memory"
+    if any(k in t for k in ("timer", "todoist", "task", "agenda", "calendar")):
+        return "task"
+    if any(k in t for k in ("bash", "write", "edit", "read", "glob", "grep")):
+        return "coding"
+    return "system"
+
+
+class Jarvis:
+    def __init__(self, mode: str = "wake") -> None:
+        self.mode = mode
+        self.loop = asyncio.new_event_loop()
+        self.brain = Brain()
+        self.brain_ready = False
+        self.speaker = speaker()
+        self.recorder: Recorder | None = None
+        self.turn: asyncio.Future | None = None
+        self.armed_until = 0.0
+        self.agent_seen: dict[str, float] = {}
+        self.phase = "idle"
+        self.speaker.on_start = self._speaking_started
+        self.speaker.on_stop = self._speaking_stopped
+
+    # ------------------------------------------------------------------ estado para o painel
+    def set_phase(self, phase: str) -> None:
+        self.phase = phase
+        level = self.recorder.level if self.recorder else 0.0
+        bus.emit({"type": "state", "phase": phase, "level": level})
+
+    def idle_phase(self) -> str:
+        return "listening" if self.armed_until > time.time() else "idle"
+
+    def _speaking_started(self) -> None:
+        if self.recorder:
+            self.recorder.guard = True
+        self.set_phase("speaking")
+
+    def _speaking_stopped(self) -> None:
+        if self.recorder:
+            self.recorder.guard = False
+        if not self.busy:
+            self.set_phase(self.idle_phase())
+
+    @property
+    def busy(self) -> bool:
+        return self.turn is not None and not self.turn.done()
+
+    def publish_health(self) -> None:
+        stats = memory.stats()
+        active = sum(1 for t in self.agent_seen.values() if time.time() - t < 10)
+        llms = telemetry.llms(self.brain_ready)
+        connected = sum(1 for p in llms if p["status"] == "connected")
+        voice_ok = stt.ready.is_set() or self.mode == "off"
+        bus.emit({"type": "health", "components": {
+            "core": {"status": "ok" if self.brain_ready else "warn", "detail": "Ativo" if self.brain_ready else "Conectando"},
+            "memory": {"status": "ok", "detail": f"{stats['memories']} memórias"},
+            "voice": {"status": "ok" if voice_ok else "warn",
+                      "detail": {"wake": "Ouvindo", "ptt": "Segure Option", "off": "Desligada"}[self.mode]
+                      if voice_ok else "Carregando"},
+            "agents": {"status": "ok", "detail": f"{active} ativos"},
+            "llms": {"status": "ok" if connected else "warn", "detail": f"{connected} conectados"},
+            "system": {"status": "ok", "detail": "Ótimo"},
+        }})
+        bus.emit({"type": "llms", "providers": llms})
+        bus.emit({"type": "memory", **stats})
+        bus.emit({"type": "agents", "agents": [
+            {"id": k, "name": n, "status": "active" if time.time() - self.agent_seen.get(k, 0) < 10 else "standby"}
+            for k, n in AGENTS]})
+
+    async def telemetry_loop(self) -> None:
+        psutil.cpu_percent(interval=None)
+        tick = 0
+        while True:
+            sys_ = await asyncio.to_thread(telemetry.system)
+            payload = {"type": "telemetry", **sys_}
+            if tick % 15 == 0:  # rede, clima e agenda são mais caros: a cada 30 s
+                place = await asyncio.to_thread(telemetry.place)
+                payload |= {"network": await asyncio.to_thread(telemetry.network),
+                            "weather": await asyncio.to_thread(telemetry.weather), "location": place["name"]}
+                self._net = {k: payload[k] for k in ("network", "weather", "location")}
+                if tick % 150 == 0:
+                    from jarvis import agenda
+                    bus.emit({"type": "timeline", "events": await asyncio.to_thread(agenda.today)})
+            else:
+                payload |= getattr(self, "_net", {})
+            bus.emit(payload)
+            if tick % 5 == 0:
+                await asyncio.to_thread(self.publish_health)
+            tick += 1
+            await asyncio.sleep(2)
+
+    async def level_loop(self) -> None:
+        """Nível do microfone ~10x por segundo, só enquanto alguém estaria olhando a onda."""
+        while True:
+            await asyncio.sleep(0.1)
+            if self.recorder and (self.recorder.held or self.phase in ("listening", "speaking")):
+                bus.emit({"type": "state", "phase": self.phase,
+                          "level": 0.5 if self.phase == "speaking" else self.recorder.level})
+
+    # ------------------------------------------------------------------ um turno
+    async def handle(self, text: str) -> None:
+        text = text.strip()
+        if not text:
+            return
+        print(f"\n> {text}")
+        bus.emit({"type": "transcript", "role": "user", "text": text, "final": True})
+        memory.add_turn("user", text)
+        self.armed_until = 0
+        routes = router.route(text)
+        if routes:
+            await self._fast(routes)
+        else:
+            await self._ask(text)
+
+    async def _fast(self, routes: list[router.Route]) -> None:
+        self.set_phase("tooling")
+        replies = []
+        for r in routes:
+            self.agent_seen["task" if r.name.startswith("timer") else "system"] = time.time()
+            try:
+                if r.speak_first and r.reply:
+                    self.speaker.say(r.reply)
+                    await asyncio.to_thread(self.speaker.wait)
+                    await asyncio.to_thread(r.run)
+                else:
+                    replies.append(await asyncio.to_thread(r.run))
+            except Exception as exc:
+                print(f"  ação {r.name} falhou: {exc}")
+                replies.append("Infelizmente isso falhou.")
+        line = " ".join(x for x in replies if x)
+        print(f"  [rota rápida: {', '.join(r.name for r in routes)}] {line}")
+        if line:
+            memory.add_turn("assistant", line)
+            bus.emit({"type": "transcript", "role": "assistant", "text": line, "final": True})
+            self.speaker.say(line)
+        else:
+            self.set_phase(self.idle_phase())
+
+    async def _ask(self, text: str) -> None:
+        self.set_phase("thinking")
+        filled = False
+        parts: list[str] = []
+
+        def on_text(delta: str) -> None:
+            parts.append(delta)
+            self.speaker.push(delta)
+            bus.emit({"type": "transcript", "role": "assistant", "text": "".join(parts), "final": False})
+
+        def on_tool(name: str) -> None:
+            nonlocal filled
+            self.agent_seen[agent_for(name)] = time.time()
+            if self.phase != "speaking":
+                self.set_phase("tooling")
+            if not filled and not parts:
+                filled = True
+                self.speaker.say(fillers.working(name))
+            if not name.startswith("mcp__mac__") and name not in ("ToolSearch",):
+                bus.feed_item(f"Usando {name.replace('mcp__', '').replace('__', ' · ')}", "live", "Jarvis")
+
+        try:
+            answer = await self.brain.ask(text, on_text, on_tool)
+        except Exception as exc:
+            print(f"  cérebro falhou: {exc}")
+            answer = "Infelizmente o cérebro não respondeu, senhor."
+            self.speaker.say(answer)
+            self.brain_ready = False
+        self.speaker.flush()
+        if answer:
+            memory.add_turn("assistant", answer)
+            bus.emit({"type": "transcript", "role": "assistant", "text": answer, "final": True})
+        if not self.speaker.speaking:
+            self.set_phase(self.idle_phase())
+
+    def submit(self, text: str) -> None:
+        """De qualquer thread: começa um turno, interrompendo o anterior se houver."""
+        def start() -> None:
+            self.turn = asyncio.ensure_future(self._run_turn(text))
+        self.loop.call_soon_threadsafe(start)
+
+    async def _run_turn(self, text: str) -> None:
+        await self.interrupt()
+        await self.handle(text)
+
+    async def interrupt(self) -> None:
+        """Barge-in: corta a fala e a geração."""
+        self.speaker.cancel()
+        await self.brain.cancel()
+
+    # ------------------------------------------------------------------ comandos do painel
+    async def on_client(self, msg: dict) -> None:
+        kind = msg.get("type")
+        if kind == "say" and msg.get("text"):
+            self.submit(msg["text"])
+        elif kind == "command":
+            prompt = QUICK.get(msg.get("id", ""))
+            if prompt:
+                self.submit(prompt)
+            elif msg.get("id") == "voice":
+                self.arm()
+        elif kind == "ptt" and self.recorder:
+            if msg.get("down"):
+                await self.interrupt()
+                self.recorder.press()
+                self.set_phase("listening")
+            else:
+                audio = self.recorder.release()
+                threading.Thread(target=self._ptt_turn, args=(audio,), daemon=True).start()
+
+    # ------------------------------------------------------------------ voz
+    def arm(self) -> None:
+        self.armed_until = time.time() + WINDOW_S
+        subprocess.Popen(["afplay", CHIME])
+        self.set_phase("listening")
+
+    def _ptt_turn(self, audio) -> None:
+        if len(audio) < config.SAMPLE_RATE * 0.3:
+            self.set_phase(self.idle_phase())
+            return
+        self.set_phase("thinking")
+        text, ms = stt.transcribe(audio)
+        print(f"  (stt {ms} ms)")
+        if text:
+            self.submit(text)
+        else:
+            self.set_phase(self.idle_phase())
+
+    def wake_loop(self) -> None:
+        assert self.recorder
+        while True:
+            try:
+                audio = self.recorder.segments.get(timeout=1)
+            except queue.Empty:
+                if self.armed_until and time.time() > self.armed_until:
+                    self.armed_until = 0
+                    if not self.busy and not self.speaker.speaking:
+                        self.set_phase("idle")
+                continue
+            try:
+                self._wake_turn(audio)
+            except Exception as exc:  # uma frase ruim nunca pode matar a escuta
+                print(f"  escuta falhou: {exc}")
+
+    def _wake_turn(self, audio) -> None:
+        text, ms = stt.transcribe(audio, prompt=False)
+        if not text:
+            return
+        talking = self.busy or self.speaker.speaking
+        woke, rest, mid = split_wake(text)
+        if talking:
+            # Enquanto ele fala, só o nome dele ou "para" interrompe: o eco da própria voz não tem "Jarvis"
+            if woke or is_stop(text):
+                print(f"  (interrompido por: {text!r})")
+                asyncio.run_coroutine_threadsafe(self.interrupt(), self.loop).result(timeout=5)
+                if rest and not is_stop(rest):
+                    self.submit(rest)
+                else:
+                    self.arm()
+            return
+        if woke:
+            if rest:
+                if mid and not router.route(rest):
+                    print(f"  (nome no meio da frase, ignorado: {text!r})")
+                    return
+                self.submit(rest)
+            else:
+                self.speaker.say(fillers.attention())
+                self.arm()
+        elif self.armed_until > time.time():
+            self.submit(text)
+        else:
+            print(f"  (não era comigo: {text!r} · {ms} ms)")
+
+    def start_ptt_key(self) -> None:
+        """Option direito segurado = falar (precisa de permissão de Acessibilidade)."""
+        try:
+            from pynput import keyboard
+        except Exception as exc:
+            print(f"  push-to-talk indisponível: {exc}")
+            return
+
+        def press(key) -> None:
+            if key == keyboard.Key.alt_r and self.recorder and not self.recorder.held:
+                asyncio.run_coroutine_threadsafe(self.on_client({"type": "ptt", "down": True}), self.loop)
+
+        def release(key) -> None:
+            if key == keyboard.Key.alt_r and self.recorder and self.recorder.held:
+                asyncio.run_coroutine_threadsafe(self.on_client({"type": "ptt", "down": False}), self.loop)
+
+        keyboard.Listener(on_press=press, on_release=release, daemon=True).start()
+
+    # ------------------------------------------------------------------ timers
+    def timer_done(self, t: Timer) -> None:
+        subprocess.run(["afplay", ALARM])
+        line = f"Senhor, lembrete: {t.label}." if t.label else "O tempo acabou, senhor."
+        bus.feed_item(t.label or "Timer finalizado", "warn", "Timer")
+        self.speaker.say(line)
+
+    # ------------------------------------------------------------------ partida
+    async def _boot(self) -> None:
+        bus.bind(asyncio.get_running_loop())
+        server = uvicorn.Server(uvicorn.Config(__import__("jarvis.server", fromlist=["x"]).create_app(self),
+                                               host=config.HOST, port=config.PORT, log_level="warning"))
+        asyncio.create_task(server.serve())
+        asyncio.create_task(self.telemetry_loop())
+        asyncio.create_task(self.level_loop())
+        timers.on_done = self.timer_done
+        timers.on_change = lambda: bus.emit({"type": "timers", "timers": timers.snapshot()})
+        timers.start()
+        news.start_loop()
+        self.set_phase("idle")
+        print(f"[jarvis] painel em http://{config.HOST}:{config.PORT} · modelo {config.MODEL} · "
+              f"escrita {'LIGADA' if config.ALLOW_WRITES else 'desligada'} · voz {self.speaker.engine}")
+        try:
+            await self.brain.start()
+            self.brain_ready = True
+            print("[jarvis] cérebro conectado")
+        except Exception as exc:
+            print(f"[jarvis] cérebro não conectou: {exc}")
+            bus.feed_item("Claude Code não conectou", "warn", str(exc)[:120])
+
+    def start_background(self) -> None:
+        def run_loop() -> None:
+            asyncio.set_event_loop(self.loop)
+            self.loop.run_until_complete(self._boot())
+            self.loop.run_forever()
+        threading.Thread(target=run_loop, daemon=True, name="loop").start()
+
+        def voice() -> None:
+            if self.mode == "off":
+                return
+            print("[jarvis] carregando o Whisper…")
+            stt.load()
+            self.recorder = Recorder()
+            self.recorder.listening = self.mode == "wake"
+            self.recorder.sync()
+            self.start_ptt_key()
+            print(f"[jarvis] voz pronta ({'diga “Ei Jarvis”' if self.mode == 'wake' else 'segure o Option direito'})")
+            bus.feed_item("Voz pronta", "info", "Diga “Ei Jarvis”" if self.mode == "wake" else "Segure o Option direito")
+            if self.mode == "wake":
+                self.wake_loop()
+        threading.Thread(target=voice, daemon=True, name="voice").start()
+
+
+def run(mode: str = "wake", window: bool = True) -> None:
+    jarvis = Jarvis(mode)
+    jarvis.start_background()
+    if window:
+        from jarvis.window import open_window
+        open_window(f"http://{config.HOST}:{config.PORT}")
+        print("[jarvis] janela fechada; continuo ouvindo. Ctrl+C para sair.")
+    try:
+        threading.Event().wait()
+    except KeyboardInterrupt:
+        print("\n[jarvis] até logo.")
