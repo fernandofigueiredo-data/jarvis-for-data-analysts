@@ -312,22 +312,22 @@ class Jarvis:
             print(f"  (não era comigo: {text!r} · {ms} ms)")
 
     def start_ptt_key(self) -> None:
-        """Option direito segurado = falar (precisa de permissão de Acessibilidade)."""
-        try:
-            from pynput import keyboard
-        except Exception as exc:
-            print(f"  push-to-talk indisponível: {exc}")
-            return
+        """Option direito segurado = falar (precisa de permissão de Monitoramento de Entrada)."""
+        from jarvis.mac.hotkey import watch_right_option
 
-        def press(key) -> None:
-            if key == keyboard.Key.alt_r and self.recorder and not self.recorder.held:
+        def press() -> None:
+            if self.recorder and not self.recorder.held:
                 asyncio.run_coroutine_threadsafe(self.on_client({"type": "ptt", "down": True}), self.loop)
 
-        def release(key) -> None:
-            if key == keyboard.Key.alt_r and self.recorder and self.recorder.held:
+        def release() -> None:
+            if self.recorder and self.recorder.held:
                 asyncio.run_coroutine_threadsafe(self.on_client({"type": "ptt", "down": False}), self.loop)
 
-        keyboard.Listener(on_press=press, on_release=release, daemon=True).start()
+        if not watch_right_option(press, release):
+            print("  push-to-talk indisponível: dê permissão em Ajustes › Privacidade e Segurança › "
+                  "Monitoramento de Entrada (e Acessibilidade) para o app que roda o Jarvis")
+            bus.feed_item("Option direito sem permissão", "warn",
+                          "Libere em Privacidade e Segurança › Monitoramento de Entrada")
 
     # ------------------------------------------------------------------ timers
     def timer_done(self, t: Timer) -> None:
@@ -371,10 +371,16 @@ class Jarvis:
                 return
             print("[jarvis] carregando o Whisper…")
             stt.load()
-            self.recorder = Recorder()
-            self.recorder.listening = self.mode == "wake"
-            self.recorder.sync()
             self.start_ptt_key()
+            try:
+                self.recorder = Recorder()
+                self.recorder.listening = self.mode == "wake"
+                self.recorder.sync()
+            except Exception as exc:
+                print(f"[jarvis] microfone indisponível: {exc}")
+                bus.feed_item("Microfone indisponível", "warn",
+                              "Libere em Privacidade e Segurança › Microfone e reabra o Jarvis")
+                return
             print(f"[jarvis] voz pronta ({'diga “Ei Jarvis”' if self.mode == 'wake' else 'segure o Option direito'})")
             bus.feed_item("Voz pronta", "info", "Diga “Ei Jarvis”" if self.mode == "wake" else "Segure o Option direito")
             if self.mode == "wake":

@@ -16,7 +16,7 @@ Na primeira vez:
 
 1. O Whisper baixa o modelo `small`, uns 460 MB.
 2. O macOS pede **Microfone**. Aceite.
-3. Para o push-to-talk (Option direito), adicione o Terminal (ou o app em que você roda o Jarvis) em **Ajustes do Sistema › Privacidade e Segurança › Acessibilidade**.
+3. Para o push-to-talk (Option direito), adicione o Terminal (ou o app em que você roda o Jarvis) em **Ajustes do Sistema › Privacidade e Segurança › Monitoramento de Entrada**. Depois feche e reabra o Terminal.
 4. Na primeira ação em um app (fechar app, modo escuro), o macOS pede **Automação**. Aceite.
 
 ### Opções
