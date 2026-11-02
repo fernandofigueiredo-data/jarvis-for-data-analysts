@@ -57,6 +57,8 @@ class Brain:
         prompt = system_prompt()
         if facts:
             prompt += "\n\nO que você já sabe sobre ele:\n" + "\n".join(f"- {f}" for f in facts)
+        if termos := memory.glossario(40):
+            prompt += "\n\nGlossário de dados dele:\n" + "\n".join(f"- {t}: {d}" for t, d in termos)
         return ClaudeAgentOptions(
             system_prompt=prompt,  # prompt próprio, não o preset de agente de código
             mcp_servers={**self.external_servers, **tools.servers()},

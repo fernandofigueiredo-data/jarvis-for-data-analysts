@@ -1,11 +1,12 @@
 """Ferramentas in-process que o Claude pode chamar: o Mac ("mac") e o próprio Jarvis ("jarvis")."""
 import asyncio
 import json
+from pathlib import Path
 from typing import Any
 
 from claude_agent_sdk import create_sdk_mcp_server, tool
 
-from jarvis import agenda, dados, news, telemetry
+from jarvis import agenda, dados, kpis, news, profundo, telemetry
 from jarvis.events import bus
 from jarvis.mac import actions as mac
 from jarvis.mac.timers import say_duration, timers
@@ -122,7 +123,7 @@ MAC_TOOLS = [list_apps, open_app, quit_app, focus_app, hide_app, set_volume, mut
              lock_screen, open_url, timer_set, timer_list, timer_cancel]
 
 
-@tool("news_latest", "Últimas manchetes das fontes que o usuário acompanha (Educadados, Data Hackers). "
+@tool("news_latest", "Últimas manchetes das fontes que o usuário acompanha (sources.json). "
       "source filtra pelo nome da fonte; refresh=true busca agora antes de responder.",
       {"type": "object", "properties": {"source": {"type": "string"}, "n": {"type": "integer"},
                                         "refresh": {"type": "boolean"}}})
@@ -178,14 +179,31 @@ async def recall(_args):
     return _ok("\n".join(items) if items else "Nada guardado ainda.")
 
 
-JARVIS_TOOLS = [news_latest, news_article, agenda_today, weather_now, remember, recall]
+@tool("news_digest", "Resumo diário de notícias de dados: as novas das últimas horas, sem repetidas, ordenadas pelos "
+      "temas do usuário. Traz título, fonte, link e a descrição do feed, que é só base: resuma com palavras suas e "
+      "nunca repita a descrição.", {"type": "object", "properties": {"horas": {"type": "number"}, "n": {"type": "integer"}}})
+async def news_digest(args):
+    itens = await asyncio.to_thread(news.digest, float(args.get("horas") or 36), int(args.get("n") or 8))
+    if not itens:
+        return _ok("Nenhuma notícia nova na janela.")
+    news.digest_textos = [x for i in itens for x in (i["title"], i["resumo"])]  # base da checagem de cópia
+    for i in reversed(itens[:5]):  # os links ficam no feed do painel; a fala só resume
+        bus.feed_item(i["title"], "news", i["source"], i["url"])
+    return _ok(json.dumps([{"titulo": i["title"], "fonte": i["source"], "link": i["url"],
+                            "descricao_do_feed": i["resumo"][:300], "temas": i["temas"]} for i in itens], ensure_ascii=False))
 
 
-async def _dados(fn, *args) -> dict[str, Any]:
+JARVIS_TOOLS = [news_latest, news_article, news_digest, agenda_today, weather_now, remember, recall]
+
+
+async def _dados(fn, *args, painel: bool = False) -> dict[str, Any]:
     try:
-        return _ok(await asyncio.to_thread(fn, *args))
+        out = _ok(await asyncio.to_thread(fn, *args))
     except dados.Recusa as exc:
         return _err(str(exc))
+    if painel:  # o painel mostra o mesmo que o Claude viu: perfil seguro e agregados
+        bus.emit({"type": "data", **dados.sessao.painel()})
+    return out
 
 
 @tool("abrir_arquivo", "Abre um CSV das pastas de dados do usuário (Downloads, Documentos, Mesa) pelo nome falado "
@@ -193,7 +211,7 @@ async def _dados(fn, *args) -> dict[str, Any]:
       {"nome": str})
 async def abrir_arquivo(args):
     print(f"  abrir_arquivo {args}", flush=True)
-    out = await _dados(dados.sessao.abrir, args["nome"])
+    out = await _dados(dados.sessao.abrir, args["nome"], painel=True)
     if not out.get("is_error") and dados.sessao.arquivo:
         bus.feed_item(f"Arquivo aberto: {dados.sessao.arquivo.name}", "info", "Dados")
     return out
@@ -225,7 +243,7 @@ _FILTRO = {"type": "object", "properties": {
           "limite": {"type": "integer"}},
        "required": ["metricas"]})
 async def agregar(args):
-    return await _dados(dados.sessao.agregar, args)
+    return await _dados(dados.sessao.agregar, args, painel=True)
 
 
 @tool("calcular", "Calculadora para variações, projeções e razões entre números já obtidos. Use ponto decimal: "
@@ -234,7 +252,160 @@ async def calcular(args):
     return await _dados(dados.sessao.calcular, args["expressao"])
 
 
-DADOS_TOOLS = [abrir_arquivo, perfil_arquivo, agregar, calcular]
+@tool("glossario_salvar", "Guarda (ou corrige) um termo do glossário de dados do usuário: sigla, coluna ou métrica com a "
+      "definição dele. O termo também ajuda a transcrição de voz a acertar a palavra.", {"termo": str, "definicao": str})
+async def glossario_salvar(args):
+    memory.glossario_salvar(args["termo"], args["definicao"])
+    return _ok("Guardado.")
+
+
+@tool("glossario", "Termos do glossário de dados do usuário com as definições dele. Consulte antes de interpretar uma "
+      "métrica ou sigla que ele usa.", {})
+async def glossario(_args):
+    itens = memory.glossario()
+    return _ok("\n".join(f"{t}: {d}" for t, d in itens) if itens else "Glossário vazio.")
+
+
+@tool("comparar_arquivo", "Compara o arquivo aberto com outra versão dele (pelo nome): linhas iguais, novas e removidas, "
+      "colunas novas, totais numéricos, período das datas e categorias que mudaram. Só agregados.", {"nome": str})
+async def comparar_arquivo(args):
+    return await _dados(dados.sessao.comparar, args["nome"])
+
+
+@tool("executar_python", "Roda Python isolado (sem rede, sem outros arquivos) sobre o arquivo aberto, já carregado em "
+      "`df` (pandas). Use só para o que agregar não faz: testes estatísticos (scipy.stats), correlação, regressão, "
+      "distribuições e gráficos. Devolva números com resultado(nome, valor) e gráficos com grafico(titulo) depois de "
+      "desenhar com matplotlib (o gráfico aparece no painel). print não volta. Só agregados voltam: textos só se forem "
+      "colunas ou categorias com 5+ linhas; toda tabela precisa de uma coluna n (tamanho do grupo); listas soltas param "
+      "em 20 itens. Limites: 30 s de CPU, 60 s, 1,5 GB.", {"codigo": str})
+async def executar_python(args):
+    print(f"  executar_python ({len(args['codigo'])} caracteres)", flush=True)
+    return await _dados(dados.sessao.python, args["codigo"], painel=True)
+
+
+@tool("decisao_anotar", "Anota uma decisão de tratamento de um arquivo (ex.: 'UF nula fica como Não informada'). Ela "
+      "volta da próxima vez que o arquivo for aberto. Sem 'arquivo', vale para o arquivo aberto; se a decisão é "
+      "sobre outro arquivo (a outra versão de uma comparação), passe o nome dele.",
+      {"type": "object", "properties": {"texto": {"type": "string"}, "arquivo": {"type": "string"}}, "required": ["texto"]})
+async def decisao_anotar(args):
+    if args.get("arquivo"):
+        achados = await asyncio.to_thread(dados.localizar, args["arquivo"])
+        if not achados:
+            return _err("Não achei esse arquivo nas pastas permitidas.")
+        nome = achados[0].name
+    elif dados.sessao.arquivo:
+        nome = dados.sessao.arquivo.name
+    else:
+        return _err("Nenhum arquivo aberto; diga de qual arquivo é a decisão.")
+    memory.decisao_anotar(nome, args["texto"])
+    return _ok(f"Anotado em {nome}.")
+
+
+@tool("arquivos_recentes", "Arquivos de dados criados ou alterados nas últimas horas nas pastas do usuário (só nome, "
+      "pasta, tamanho e idade).", {"type": "object", "properties": {"horas": {"type": "number"}}})
+async def arquivos_recentes(args):
+    itens = await asyncio.to_thread(dados.recentes, float(args.get("horas") or 48))
+    return _ok(json.dumps(itens, ensure_ascii=False) if itens else "Nenhum arquivo novo.")
+
+
+def painel_kpis() -> None:
+    bus.emit({"type": "kpis", "itens": [{"nome": k["nome"], "arquivo": k["arquivo"], "ultimo": k["ultimo"]}
+                                        for k in kpis.listar()]})
+
+
+@tool("kpi_criar", "Cria (ou substitui) um monitor de KPI que o Jarvis confere sozinho de hora em hora e avisa falando "
+      "quando a regra dispara, sem passar pelo Claude. Regras: queda_pct/alta_pct comparam o último período com a média "
+      "dos 'janela' anteriores (exige 'por' com período de data, ex. 'data_venda:dia'); abaixo/acima comparam o último "
+      "valor com um limite. O período em curso fica de fora por padrão.",
+      {"type": "object", "properties": {
+          "nome": {"type": "string", "description": "nome curto, ex.: 'Faturamento diário de SP'"},
+          "arquivo": {"type": "string", "description": "nome do arquivo; vale sempre a versão mais recente"},
+          "metrica": {"type": "object", "properties": {"funcao": {"type": "string", "enum": list(dados.METRICAS)},
+                                                       "coluna": {"type": "string"}}, "required": ["funcao"]},
+          "por": {"type": "array", "items": {"type": "string"}},
+          "filtros": {"type": "array", "items": _FILTRO},
+          "regra": {"type": "object", "properties": {
+              "tipo": {"type": "string", "enum": sorted(kpis.TIPOS)}, "valor": {"type": "number"},
+              "janela": {"type": "integer"}, "ignorar_periodo_aberto": {"type": "boolean"}},
+              "required": ["tipo", "valor"]}},
+       "required": ["nome", "arquivo", "metrica", "regra"]})
+async def kpi_criar(args):
+    try:
+        atual = await asyncio.to_thread(kpis.criar, args)
+    except dados.Recusa as exc:
+        return _err(str(exc))
+    except Exception as exc:
+        print(f"  kpi_criar falhou: {exc}")
+        return _err(f"não consegui calcular a métrica ({type(exc).__name__})")
+    painel_kpis()
+    # os números do monitor entram na base do validador, como os do agregar
+    return _ok(dados.sessao.registrar({"criado": args["nome"], "agora": atual}))
+
+
+@tool("kpi_listar", "Monitores de KPI ativos, com a regra e a última conferência.", {})
+async def kpi_listar(_args):
+    itens = kpis.listar()
+    return _ok(json.dumps(itens, ensure_ascii=False, default=str) if itens else "Nenhum monitor ativo.")
+
+
+@tool("kpi_remover", "Desliga um monitor de KPI pelo nome.", {"nome": str})
+async def kpi_remover(args):
+    ok = memory.kpi_remover(args["nome"])
+    painel_kpis()
+    return _ok("Removido.") if ok else _err("Não há monitor com esse nome.")
+
+
+@tool("kpi_conferir", "Confere agora todos os monitores e devolve o estado de cada um.", {})
+async def kpi_conferir(_args):
+    itens = []
+    for k in kpis.listar():
+        try:
+            r = await asyncio.to_thread(kpis.avaliar, k)
+        except Exception as exc:
+            r = {"texto": f"{k['nome']}: não consegui conferir ({type(exc).__name__})", "disparou": False}
+        itens.append({"nome": k["nome"], "texto": r["texto"], "disparou": r["disparou"], "valor": r.get("valor"),
+                      "base": r.get("base"), "variacao_pct": r.get("variacao_pct")})
+    return _ok(dados.sessao.registrar(itens) if itens else "Nenhum monitor ativo.")
+
+
+@tool("analise_profunda", "Abre o modo análise profunda: uma sessão com o plugin analise-dados (notebook Jupyter, "
+      "análise guiada, revisão crítica, relatório e painel). Use quando ele pedir análise profunda, notebook ou para "
+      "analisar a fundo. 'arquivo': um CSV das pastas de dados (vira um projeto novo, com cópia em dados/); 'pasta': "
+      "a pasta de um projeto que ele escolheu. Sem nenhum dos dois, usa o arquivo aberto. Neste modo as linhas do "
+      "arquivo vão para a análise (exceção que ele autorizou).",
+      {"type": "object", "properties": {"arquivo": {"type": "string"}, "pasta": {"type": "string"}}})
+async def analise_profunda(args):
+    plugin = profundo.plugin_path()
+    if plugin is None:
+        return _err("O plugin analise-dados não está instalado no Claude Code.")
+    if profundo.estado.ativo:
+        return _err(f"O modo profundo já está aberto em {profundo.estado.sessao.projeto}.")
+    arquivo = None
+    if not args.get("pasta"):
+        if args.get("arquivo"):
+            achados = await asyncio.to_thread(dados.localizar, args["arquivo"])
+            if not achados:
+                return _err("Não achei esse arquivo nas pastas de dados.")
+            arquivo = achados[0]
+        elif dados.sessao.arquivo:
+            arquivo = dados.sessao.arquivo
+        else:
+            return _err("Diga qual arquivo ou pasta analisar.")
+    try:
+        projeto, origem = await asyncio.to_thread(profundo.preparar, args.get("pasta"), arquivo)
+    except ValueError as exc:
+        return _err(str(exc))
+    profundo.estado.sessao = profundo.Profundo(projeto, plugin)
+    profundo.estado.pendente = "/analise-dados:analise"
+    bus.feed_item(f"Análise profunda: {projeto.name}", "info", str(projeto).replace(str(Path.home()), "~"))
+    return _ok(f"Modo profundo vai começar em {projeto} ({origem}). Assim que esta resposta terminar, o plugin prepara "
+               "a pasta (.venv, dados/, saidas/, .claude/), sobe o Jupyter e o notebook abre no navegador; daí em diante "
+               "o que ele disser vai para a análise, até ele dizer 'sair do modo profundo'. Diga isso em uma frase.")
+
+
+DADOS_TOOLS = [abrir_arquivo, perfil_arquivo, agregar, calcular, executar_python, comparar_arquivo, decisao_anotar,
+               arquivos_recentes, glossario_salvar, glossario, kpi_criar, kpi_listar, kpi_remover, kpi_conferir,
+               analise_profunda]
 
 
 def servers() -> dict[str, Any]:

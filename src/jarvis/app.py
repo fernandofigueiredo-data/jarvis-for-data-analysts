@@ -4,11 +4,12 @@ import queue
 import subprocess
 import threading
 import time
+from pathlib import Path
 
 import psutil
 import uvicorn
 
-from jarvis import agenda, config, dados, fillers, news, router, telemetry
+from jarvis import agenda, config, dados, fillers, kpis, news, profundo, router, telemetry
 from jarvis.audio.recorder import Recorder
 from jarvis.audio.stt import stt
 from jarvis.audio.tts import speaker
@@ -19,17 +20,30 @@ from jarvis.memory import memory
 from jarvis.wake import WINDOW_S, is_stop, split_wake
 
 CHIME = "/System/Library/Sounds/Tink.aiff"
+UNCONFIRMED = "Esse número não está confirmado nos dados."
 ALARM = "/System/Library/Sounds/Glass.aiff"
 AGENTS = [("coding", "Agente de Código"), ("research", "Agente de Pesquisa"), ("memory", "Agente de Memória"),
           ("browser", "Agente de Navegação"), ("task", "Agente de Tarefas"), ("system", "Agente de Sistema")]
 # id do botão do painel -> (o que aparece na conversa, o que o Claude recebe)
 QUICK = {
-    "briefing": ("Briefing executivo", "Faça meu briefing executivo de hoje: use agenda_today, timer_list e "
-                                       "news_latest (3 manchetes). No máximo cinco frases faladas."),
-    "news": ("Resumo de notícias", "Quais as últimas notícias das minhas fontes?"),
+    "briefing": ("Briefing executivo", "Faça meu briefing de analista de hoje: use agenda_today, timer_list, "
+                                       "news_digest (as 3 mais relevantes, uma frase sua para cada) e arquivos_recentes "
+                                       "(arquivos de dados novos). No máximo cinco frases faladas."),
+    "news": ("Resumo de notícias", "Faça o resumo de notícias de dados: use news_digest e fale as 3 mais relevantes, "
+                                   "uma frase sua para cada, sem repetir a descrição do feed. Diga que os links estão no feed."),
     "agenda": ("O que tenho na agenda hoje?", "O que tenho na agenda hoje?"),
     "new_task": ("Iniciar tarefa", "Quero criar uma tarefa. Pergunte o que é, em uma frase."),
 }
+
+
+def digest_due(agora: time.struct_time, horario: str, ultimo_dia: int) -> bool:
+    """Já passou do horário hoje e o resumo de hoje ainda não saiu."""
+    try:
+        h, m = (int(x) for x in horario.split(":"))
+    except ValueError:
+        return False
+    hoje = int(time.strftime("%Y%m%d", agora))
+    return ultimo_dia != hoje and (agora.tm_hour, agora.tm_min) >= (h, m)
 
 
 def agent_for(tool: str) -> str:
@@ -126,6 +140,34 @@ class Jarvis:
             tick += 1
             await asyncio.sleep(2)
 
+    async def digest_loop(self) -> None:
+        """Resumo diário de notícias no horário configurado; se o Mac estava desligado no horário, sai ao ligar."""
+        if not config.DIGEST_TIME:
+            return
+        await asyncio.sleep(90)  # deixa a primeira coleta de notícias terminar
+        while True:
+            if digest_due(time.localtime(), config.DIGEST_TIME, memory.counter("resumo_diario_dia")) and not self.busy:
+                memory.set_counter("resumo_diario_dia", int(time.strftime("%Y%m%d")))
+                self.submit(QUICK["news"][1], shown="Resumo diário de notícias")
+            await asyncio.sleep(60)
+
+    async def kpi_loop(self) -> None:
+        """Confere os monitores de KPI; alerta novo é falado e vai para o feed. Tudo local, sem o Claude."""
+        from jarvis.brain.tools import painel_kpis
+        painel_kpis()  # o painel mostra os monitores (e a última conferência) desde o início
+        await asyncio.sleep(120)
+        while True:
+            if memory.kpis():
+                try:
+                    for alerta in await asyncio.to_thread(kpis.conferir_todos):
+                        print(f"  alerta de KPI: {alerta['texto']}")
+                        bus.feed_item(f"Alerta: {alerta['nome']}", "warn", alerta["texto"][:160])
+                        self.speaker.say(f"Senhor, {alerta['texto']}.")
+                except Exception as exc:
+                    print(f"  monitor de KPIs falhou: {exc}")
+                painel_kpis()
+            await asyncio.sleep(config.KPI_INTERVALO_S)
+
     async def level_loop(self) -> None:
         """Nível do microfone ~10x por segundo, só enquanto alguém estaria olhando a onda."""
         while True:
@@ -147,8 +189,56 @@ class Jarvis:
         routes = router.route(text)
         if routes:
             await self._fast(routes)
+        elif profundo.estado.ativo and profundo.SAIR.search(text):
+            await self._sair_profundo()
+        elif profundo.estado.ativo:
+            await self._ask_profundo(text)
         else:
             await self._ask(text)
+
+    async def _ask_profundo(self, text: str) -> None:
+        """Turno na sessão do plugin: a resposta inteira vai para a conversa; só o resumo é falado."""
+        sessao = profundo.estado.sessao
+        assert sessao
+        self.set_phase("thinking")
+        filled = False
+
+        def on_tool(name: str) -> None:
+            nonlocal filled
+            self.agent_seen["coding"] = time.time()
+            if self.phase != "speaking":
+                self.set_phase("tooling")
+            if not filled:
+                filled = True
+                self.speaker.say(fillers.working(name))
+            bus.feed_item(f"Análise profunda · {name.replace('mcp__plugin_analise-dados_jupyter__', 'jupyter · ')}", "live", "Jarvis")
+
+        try:
+            answer = await sessao.ask(text, on_tool)
+        except Exception as exc:
+            print(f"  [profundo] falhou: {exc}")
+            answer = "Infelizmente a análise profunda não respondeu, senhor."
+            bus.feed_item("A análise profunda não respondeu", "warn", str(exc)[:160])
+        self.speaker.say(profundo.falado(answer))
+        memory.add_turn("assistant", answer)
+        bus.emit({"type": "transcript", "role": "assistant", "text": answer, "final": True})
+        if config.ABRIR_NOTEBOOK and not sessao.notebook_aberto and (url := sessao.jupyter_url()):
+            sessao.notebook_aberto = True
+            await asyncio.to_thread(subprocess.run, ["open", url], capture_output=True)
+            bus.feed_item("Notebook aberto no navegador", "info", sessao.projeto.name)
+        if not self.speaker.speaking:
+            self.set_phase(self.idle_phase())
+
+    async def _sair_profundo(self) -> None:
+        sessao, profundo.estado.sessao = profundo.estado.sessao, None
+        profundo.estado.pendente = None
+        assert sessao
+        await sessao.stop()
+        line = f"Análise profunda encerrada. O notebook fica salvo em {sessao.projeto.name.replace('_', ' ')}."
+        memory.add_turn("assistant", line)
+        bus.emit({"type": "transcript", "role": "assistant", "text": line, "final": True})
+        bus.feed_item("Análise profunda encerrada", "info", str(sessao.projeto).replace(str(Path.home()), "~"))
+        self.speaker.say(line)
 
     async def _fast(self, routes: list[router.Route]) -> None:
         self.set_phase("tooling")
@@ -195,6 +285,12 @@ class Jarvis:
             if not name.startswith("mcp__mac__") and name not in ("ToolSearch",):
                 bus.feed_item(f"Usando {name.replace('mcp__', '').replace('__', ' · ')}", "live", "Jarvis")
 
+        def guard(frase: str) -> str:
+            # Frase com número sobre os dados que não saiu de nenhuma ferramenta não é falada
+            return UNCONFIRMED if dados.sessao.conferir_frase(frase, text) else frase
+
+        self.speaker.guard = guard
+        news.digest_textos = []
         try:
             answer = await self.brain.ask(text, on_text, on_tool)
             self.brain_ready = True
@@ -205,13 +301,19 @@ class Jarvis:
             self.brain_ready = False
             bus.feed_item("O Claude não respondeu", "warn", str(exc)[:160])
         self.speaker.flush()
-        if answer:
-            memory.add_turn("assistant", answer)
-            bus.emit({"type": "transcript", "role": "assistant", "text": answer, "final": True})
-        # Todo número sobre os dados tem de ter saído de uma ferramenta; o que não saiu vira aviso no feed
+        self.speaker.guard = None
+        # Todo número sobre os dados tem de ter saído de uma ferramenta; o que não saiu vira aviso no feed e na conversa
         if sem_origem := dados.sessao.conferir_turno(answer, text):
             print(f"  números sem origem: {sem_origem}")
             bus.feed_item("Número sem origem nos dados", "warn", ", ".join(sem_origem)[:160])
+            answer += f"\n\n⚠ Sem origem nos dados (não falado): {', '.join(sem_origem)}"
+        # Resumo de notícia é com palavras próprias: trecho longo igual à fonte vira aviso (direito autoral)
+        if news.digest_textos and (copias := news.copia_longa(answer, news.digest_textos)):
+            print(f"  resumo copiou a fonte: {copias[:2]}")
+            bus.feed_item("O resumo repetiu um trecho da fonte", "warn", copias[0][:160])
+        if answer:
+            memory.add_turn("assistant", answer)
+            bus.emit({"type": "transcript", "role": "assistant", "text": answer, "final": True})
         if not self.speaker.speaking:
             self.set_phase(self.idle_phase())
 
@@ -228,11 +330,17 @@ class Jarvis:
             # Não atrasa nada: o cérebro só aceita a próxima pergunta depois de fechar a anterior.
             await asyncio.wait({prev}, timeout=10)
         await self.handle(text, shown)
+        # a ferramenta analise_profunda deixa o primeiro pedido da sessão nova para depois deste turno
+        if pendente := profundo.estado.pendente:
+            profundo.estado.pendente = None
+            await self.handle(pendente, shown="Análise profunda: preparando o projeto")
 
     async def interrupt(self) -> None:
         """Barge-in: corta a fala e a geração."""
         self.speaker.cancel()
         await self.brain.cancel()
+        if profundo.estado.sessao:
+            await profundo.estado.sessao.cancel()
 
     # ------------------------------------------------------------------ comandos do painel
     async def on_client(self, msg: dict) -> None:
@@ -368,6 +476,8 @@ class Jarvis:
         asyncio.create_task(server.serve())
         asyncio.create_task(self.telemetry_loop())
         asyncio.create_task(self.level_loop())
+        asyncio.create_task(self.digest_loop())
+        asyncio.create_task(self.kpi_loop())
         timers.on_done = self.timer_done
         timers.on_change = lambda: bus.emit({"type": "timers", "timers": timers.snapshot()})
         timers.start()

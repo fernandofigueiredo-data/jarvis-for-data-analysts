@@ -55,6 +55,35 @@ export interface Provider {
   status: 'connected' | 'not_linked'
 }
 
+export interface DataColumn {
+  coluna: string
+  tipo: string
+  nulos_pct: number
+  dado_pessoal?: boolean
+}
+
+/** Um resultado de `agregar`: o mesmo que o Claude viu (grupos com menos de k linhas já omitidos). */
+export interface DataResult {
+  pedido: { metricas?: { funcao: string; coluna?: string }[]; por?: string[]; filtros?: unknown[] }
+  colunas: string[]
+  linhas: (string | number | null)[][]
+  grupos_omitidos_por_terem_menos_de_k_linhas: number
+  k: number
+  total_de_grupos: number
+}
+
+export interface DataState {
+  arquivo: string | null
+  linhas: number | null
+  total_colunas: number | null
+  codificacao?: string
+  separador?: string
+  colunas: DataColumn[]
+  alertas: string[]
+  resultados: DataResult[] // mais recente primeiro
+  graficos?: { url: string; titulo: string | null }[] // do Python isolado; só no painel, não vão para o Claude
+}
+
 export type StateMsg = { type: 'state'; phase: Phase; level: number }
 export type TranscriptMsg = { type: 'transcript' } & TranscriptLine
 export type FeedMsg = { type: 'feed'; item: FeedItem }
@@ -64,6 +93,15 @@ export type AgentsMsg = { type: 'agents'; agents: Agent[] }
 export type TimelineMsg = { type: 'timeline'; events: TimelineEvent[] }
 export type MemoryMsg = { type: 'memory' } & MemoryStats
 export type LlmsMsg = { type: 'llms'; providers: Provider[] }
+export type DataMsg = { type: 'data' } & DataState
+
+/** Monitor de KPI: o daemon confere sozinho e fala quando a regra dispara. */
+export interface KpiItem {
+  nome: string
+  arquivo: string
+  ultimo: { texto: string; disparou: boolean; valor: number | null; periodo?: string; conferido?: number } | null
+}
+export type KpisMsg = { type: 'kpis'; itens: KpiItem[] }
 
 type Body<T> = Omit<T, 'type'>
 
@@ -79,6 +117,8 @@ export type SnapshotMsg = {
   timeline?: Body<TimelineMsg>
   memory?: Body<MemoryMsg>
   llms?: Body<LlmsMsg>
+  data?: Body<DataMsg>
+  kpis?: Body<KpisMsg>
 }
 
 export type ServerMessage =
@@ -91,6 +131,8 @@ export type ServerMessage =
   | TimelineMsg
   | MemoryMsg
   | LlmsMsg
+  | DataMsg
+  | KpisMsg
   | SnapshotMsg
 
 export type ClientMessage =

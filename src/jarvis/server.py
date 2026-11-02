@@ -1,13 +1,15 @@
 """HTTP + WebSocket local (127.0.0.1) que alimenta o painel e recebe comandos dele."""
 import asyncio
 import json
+import re
+from pathlib import Path
 from typing import TYPE_CHECKING
 
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect
-from fastapi.responses import HTMLResponse
+from fastapi import FastAPI, Request, WebSocket, WebSocketDisconnect
+from fastapi.responses import FileResponse, HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 
-from jarvis import config, news
+from jarvis import config, dados, news
 from jarvis.events import bus
 from jarvis.memory import memory
 
@@ -43,6 +45,48 @@ def create_app(jarvis: "Jarvis") -> FastAPI:
     @app.get("/api/news")
     async def latest_news(source: str | None = None):
         return memory.latest_news(source, 30)
+
+    @app.post("/api/upload")
+    async def upload(request: Request, nome: str):
+        """Arquivo arrastado para o painel: corpo cru (sem multipart), gravado em data/arquivos e aberto num turno."""
+        # mesma regra do WebSocket: uma página qualquer aberta no navegador não pode mandar arquivos ao Jarvis
+        if request.headers.get("origin") not in ALLOWED_ORIGINS:
+            return JSONResponse({"erro": "origem não permitida"}, status_code=403)
+        base = re.sub(r"[^\w.\- ]", "_", Path(nome).name).strip(" .") or "arquivo.csv"
+        if Path(base).suffix.lower() not in dados.EXTENSOES:
+            return JSONResponse({"erro": f"só {', '.join(sorted(dados.EXTENSOES))}"}, status_code=415)
+        destino = config.UPLOAD_DIR / base
+        n = 2
+        while destino.exists():
+            destino = config.UPLOAD_DIR / f"{Path(base).stem}-{n}{Path(base).suffix}"
+            n += 1
+        tamanho = 0
+        try:
+            with destino.open("wb") as f:
+                async for chunk in request.stream():
+                    tamanho += len(chunk)
+                    if tamanho > config.UPLOAD_MAX_BYTES:
+                        raise ValueError("grande demais")
+                    f.write(chunk)
+        except ValueError:
+            destino.unlink(missing_ok=True)
+            return JSONResponse({"erro": f"arquivo acima de {config.UPLOAD_MAX_BYTES // 2**20} MB"}, status_code=413)
+        if not tamanho:
+            destino.unlink(missing_ok=True)
+            return JSONResponse({"erro": "arquivo vazio"}, status_code=400)
+        jarvis.submit(f"Abra o arquivo {destino} com abrir_arquivo e me dê o panorama em até duas frases.",
+                      shown=f"Arquivo enviado: {destino.name}")
+        return {"ok": True, "arquivo": destino.name, "bytes": tamanho}
+
+    @app.get("/api/graficos/{nome}")
+    async def grafico(nome: str):
+        """PNG do Python isolado. Nome aleatório (uuid), só arquivos .png da pasta de gráficos."""
+        if not re.fullmatch(r"[0-9a-f]{32}\.png", nome):
+            return JSONResponse({"erro": "nome inválido"}, status_code=404)
+        path = config.CACHE_DIR / "graficos" / nome
+        if not path.exists():
+            return JSONResponse({"erro": "não encontrado"}, status_code=404)
+        return FileResponse(path, media_type="image/png")
 
     @app.websocket("/ws")
     async def ws(socket: WebSocket):

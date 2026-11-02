@@ -9,6 +9,7 @@ import {
   MessagesSquare,
   Mic,
   Newspaper,
+  Table2,
   type LucideIcon,
 } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
@@ -26,12 +27,14 @@ const NAV: { label: string; icon: LucideIcon; to: Section }[] = [
   { label: 'Memória', icon: Database, to: 'memoria' },
   { label: 'Conversas', icon: MessagesSquare, to: 'conversa' },
   { label: 'Notícias', icon: Newspaper, to: 'noticias' },
+  { label: 'Dados', icon: Table2, to: 'dados' },
 ]
 
 export function goTo(to: Section) {
   const s = useJarvis.getState()
   s.setSection(to)
   if (to === 'conversa') s.setChatOpen(true)
+  else if (to === 'dados') s.setDataOpen(true)
   // no Modo Foco só o globo e o feed aparecem: o Command Center e os outros cartões pedem o painel completo
   else if (s.focusMode && to !== 'noticias') s.toggleFocus()
   requestAnimationFrame(() => {

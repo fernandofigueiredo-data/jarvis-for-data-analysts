@@ -19,6 +19,9 @@ create table if not exists turns (id integer primary key, ts real, role text, te
 create table if not exists memories (id integer primary key, ts real, text text);
 create table if not exists news (url text primary key, source text, title text, ts real);
 create table if not exists counters (name text primary key, value integer);
+create table if not exists decisoes (id integer primary key, arquivo text, texto text, ts real);
+create table if not exists kpis (nome text primary key collate nocase, definicao text, ultimo text, ultimo_alerta text);
+create table if not exists glossario (termo text primary key collate nocase, definicao text, ts real);
 """
 
 
@@ -26,6 +29,10 @@ class Memory:
     def __init__(self, path=config.DATA_DIR / "jarvis.db") -> None:
         self.db = sqlite3.connect(path, check_same_thread=False)
         self.db.executescript(SCHEMA)
+        try:  # bancos de antes do resumo diário: a descrição do feed é a base do resumo e da checagem de cópia
+            self.db.execute("alter table news add column resumo text")
+        except sqlite3.OperationalError:
+            pass
         self.lock = threading.Lock()
 
     def _exec(self, sql: str, args: tuple = ()) -> list[tuple]:
@@ -51,9 +58,43 @@ class Memory:
     def memories(self, n: int = 50) -> list[str]:
         return [t for (t,) in self._exec("select text from memories order by id desc limit ?", (n,))]
 
+    def glossario_salvar(self, termo: str, definicao: str) -> None:
+        self._exec("insert into glossario (termo, definicao, ts) values (?, ?, ?) "
+                   "on conflict(termo) do update set definicao = excluded.definicao, ts = excluded.ts",
+                   (termo.strip(), definicao.strip(), time.time()))
+
+    def glossario(self, n: int = 200) -> list[tuple[str, str]]:
+        return self._exec("select termo, definicao from glossario order by ts desc limit ?", (n,))
+
+    def decisao_anotar(self, arquivo: str, texto: str) -> None:
+        self._exec("insert into decisoes (arquivo, texto, ts) values (?, ?, ?)", (arquivo, texto.strip(), time.time()))
+
+    def decisoes(self, arquivo: str) -> list[str]:
+        return [t for (t,) in self._exec("select texto from decisoes where arquivo = ? order by id", (arquivo,))]
+
+    def kpi_salvar(self, nome: str, definicao: str) -> None:
+        self._exec("insert into kpis (nome, definicao) values (?, ?) "
+                   "on conflict(nome) do update set definicao = excluded.definicao, ultimo = null, ultimo_alerta = null",
+                   (nome.strip(), definicao))
+
+    def kpis(self) -> list[tuple[str, str, str | None, str | None]]:
+        return self._exec("select nome, definicao, ultimo, ultimo_alerta from kpis order by nome")
+
+    def kpi_resultado(self, nome: str, ultimo: str, ultimo_alerta: str | None) -> None:
+        self._exec("update kpis set ultimo = ?, ultimo_alerta = ? where nome = ?", (ultimo, ultimo_alerta, nome))
+
+    def kpi_remover(self, nome: str) -> bool:
+        antes = len(self.kpis())
+        self._exec("delete from kpis where nome = ?", (nome.strip(),))
+        return len(self.kpis()) < antes
+
     def bump(self, name: str, by: int = 1) -> None:
         self._exec("insert into counters (name, value) values (?, ?) "
                    "on conflict(name) do update set value = value + excluded.value", (name, by))
+
+    def set_counter(self, name: str, value: int) -> None:
+        self._exec("insert into counters (name, value) values (?, ?) "
+                   "on conflict(name) do update set value = excluded.value", (name, value))
 
     def counter(self, name: str) -> int:
         rows = self._exec("select value from counters where name = ?", (name,))
@@ -62,9 +103,13 @@ class Memory:
     def news_seen(self, url: str) -> bool:
         return bool(self._exec("select 1 from news where url = ?", (url,)))
 
-    def add_news(self, url: str, source: str, title: str) -> None:
-        self._exec("insert or ignore into news (url, source, title, ts) values (?, ?, ?, ?)",
-                   (url, source, title, time.time()))
+    def add_news(self, url: str, source: str, title: str, resumo: str = "") -> None:
+        self._exec("insert or ignore into news (url, source, title, ts, resumo) values (?, ?, ?, ?, ?)",
+                   (url, source, title, time.time(), resumo))
+
+    def news_since(self, ts: float) -> list[dict]:
+        rows = self._exec("select url, source, title, ts, coalesce(resumo, '') from news where ts >= ? order by ts desc", (ts,))
+        return [{"url": u, "source": s, "title": t, "ts": x, "resumo": r} for u, s, t, x, r in rows]
 
     def latest_news(self, source: str | None = None, n: int = 10) -> list[dict]:
         rows = self._exec("select url, source, title, ts from news order by ts desc, rowid desc limit 500")

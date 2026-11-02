@@ -16,12 +16,14 @@ import tempfile
 import threading
 import time
 import unicodedata
+from collections import Counter
 from pathlib import Path
 
 import duckdb
 from charset_normalizer import from_bytes
 
 from jarvis import config
+from jarvis.memory import memory
 
 AMOSTRA = 256 * 1024
 EXTENSOES = {".csv", ".tsv"}  # os mesmos que o agent.py nega ao Read
@@ -70,8 +72,9 @@ def _literal(path: Path) -> str:
     return "'" + str(path).replace("'", "''") + "'"
 
 
-def carregar(path: Path) -> tuple[duckdb.DuckDBPyConnection, dict]:
-    """Tabela `dados` numa conexão própria, já travada: depois disso nenhum SQL alcança arquivo, rede ou extensão."""
+def carregar(path: Path, exportar: Path | None = None) -> tuple[duckdb.DuckDBPyConnection, dict]:
+    """Tabela `dados` numa conexão própria, já travada: depois disso nenhum SQL alcança arquivo, rede ou extensão.
+    `exportar`: Parquet com a tabela já limpa, gravado antes da trava, para o Python isolado ler."""
     t0 = time.perf_counter()
     enc = detectar_codificacao(path)
     tmp = Path(tempfile.mkdtemp(prefix="jarvis_csv_"))
@@ -106,6 +109,8 @@ def carregar(path: Path) -> tuple[duckdb.DuckDBPyConnection, dict]:
             selects.append(q)
         con.execute(f"create table dados as select {', '.join(selects)} from bruto")
         con.execute("drop table bruto")
+        if exportar:
+            con.execute(f"copy dados to {_literal(exportar)} (format parquet)")
         con.execute("SET memory_limit='1GB'")
         con.execute("SET enable_external_access=false")
         con.execute("SET lock_configuration=true")
@@ -129,6 +134,16 @@ def colunas_pessoais(con) -> set[str]:
             amostra = [v for (v,) in con.execute(f'select "{c}" from dados where "{c}" is not null limit 200').fetchall()]
             if amostra and sum(any(p.match(v.strip()) for p in PII_VALOR) for v in amostra) >= len(amostra) / 2:
                 out.add(c)
+    return out
+
+
+def rotulos_permitidos(con, pessoais: set[str], k: int) -> set[str]:
+    """Nomes de colunas e categorias (texto, fora das pessoais) com pelo menos k linhas."""
+    out = set(colunas(con))
+    for c, t in colunas(con).items():
+        if t == "VARCHAR" and c not in pessoais:
+            out |= {v for (v,) in con.execute(f'select "{c}" from dados where "{c}" is not null group by 1 '
+                                              f"having count(*) >= ? limit 5000", [k]).fetchall()}
     return out
 
 
@@ -337,29 +352,44 @@ def permitido(path: Path, pastas: list[Path]) -> bool:
     return any(real.is_relative_to(p.resolve()) for p in pastas if p.exists())
 
 
-def localizar(nome: str, pastas: list[Path] | None = None) -> list[Path]:
-    """Arquivos que casam com o nome falado ("vendas 2025" acha vendas_2025.csv), mais recentes primeiro."""
-    pastas = pastas if pastas is not None else config.DATA_FOLDERS
-    bruto = Path(nome.strip()).expanduser()
-    if bruto.is_absolute():
-        return [bruto] if bruto.is_file() and permitido(bruto, pastas) else []
-    alvo = _norm(Path(nome).stem if Path(nome).suffix.lower() in EXTENSOES else nome)
-    if not alvo:
-        return []
-    achados = []
+def _arquivos(pastas: list[Path]):
+    """CSV/TSV até 3 níveis abaixo de cada pasta, sem pastas ocultas nem de dependências."""
     for pasta in pastas:
         if not pasta.is_dir():
             continue
         raiz = len(pasta.parts)
         for dirpath, dirnames, filenames in os.walk(pasta):
             atual = Path(dirpath)
-            # até 3 níveis abaixo da pasta, sem pastas ocultas nem de dependências (Documents pode ter projetos inteiros)
             dirnames[:] = [] if len(atual.parts) - raiz >= 3 else \
                 [d for d in dirnames if not d.startswith(".") and d not in IGNORAR_PASTAS]
             for f in filenames:
                 p = atual / f
-                if p.suffix.lower() in EXTENSOES and alvo in _norm(p.stem) and permitido(p, pastas):
-                    achados.append(p)
+                if p.suffix.lower() in EXTENSOES and permitido(p, pastas):
+                    yield p
+
+
+def recentes(horas: float = 48, pastas: list[Path] | None = None) -> list[dict]:
+    """Arquivos de dados criados ou alterados na janela: só nome, pasta, tamanho e idade (nada do conteúdo)."""
+    pastas = pastas if pastas is not None else [*config.DATA_FOLDERS, config.UPLOAD_DIR]
+    agora, out = time.time(), []
+    for p in _arquivos(pastas):
+        st = p.stat()
+        if agora - st.st_mtime <= horas * 3600:
+            out.append({"arquivo": p.name, "pasta": str(p.parent).replace(str(Path.home()), "~"),
+                        "mb": round(st.st_size / 2**20, 1), "horas_atras": round((agora - st.st_mtime) / 3600, 1)})
+    return sorted(out, key=lambda x: x["horas_atras"])[:20]
+
+
+def localizar(nome: str, pastas: list[Path] | None = None) -> list[Path]:
+    """Arquivos que casam com o nome falado ("vendas 2025" acha vendas_2025.csv), mais recentes primeiro."""
+    pastas = pastas if pastas is not None else [*config.DATA_FOLDERS, config.UPLOAD_DIR]
+    bruto = Path(nome.strip()).expanduser()
+    if bruto.is_absolute():
+        return [bruto] if bruto.is_file() and permitido(bruto, pastas) else []
+    alvo = _norm(Path(nome).stem if Path(nome).suffix.lower() in EXTENSOES else nome)
+    if not alvo:
+        return []
+    achados = [p for p in _arquivos(pastas) if alvo in _norm(p.stem)]
     exatos = [p for p in achados if _norm(p.stem) == alvo]
     return sorted(exatos or achados, key=lambda p: p.stat().st_mtime, reverse=True)
 
@@ -376,6 +406,17 @@ class Sessao:
         self.pessoais: set[str] = set()
         self.resultados: list[str] = []
         self.usada = False  # alguma ferramenta de dados rodou neste turno
+        self.resumo: dict = {}  # perfil do arquivo aberto, para o painel
+        self.historico: list[dict] = []  # últimos resultados de agregar, para o painel
+        self.nomes_colunas: list[str] = []  # para o prompt do Whisper (lido de outra thread, sem tocar no DuckDB)
+        self.pasta: Path | None = None  # Parquet do arquivo aberto, lido pelo Python isolado
+        self.rotulos: set[str] = set()  # textos que podem sair do Python: colunas e categorias com ≥ K linhas
+        self.graficos: list[dict] = []  # gráficos do Python isolado, para o painel (não vão para o Claude)
+
+    def registrar(self, obj) -> str:
+        """Resultado de outra ferramenta de dados (ex.: monitor de KPI) entra na base do validador."""
+        with self.lock:
+            return self._registrar(obj)
 
     def _registrar(self, obj) -> str:
         texto = json.dumps(obj, ensure_ascii=False, default=str)
@@ -386,20 +427,31 @@ class Sessao:
     def abrir(self, nome: str) -> str:
         candidatos = localizar(nome)
         if not candidatos:
-            pastas = ", ".join(str(p).replace(str(Path.home()), "~") for p in config.DATA_FOLDERS)
+            pastas = ", ".join(str(p).replace(str(Path.home()), "~") for p in [*config.DATA_FOLDERS, config.UPLOAD_DIR])
             raise Recusa(f"nenhum CSV com esse nome nas pastas permitidas ({pastas})")
         path = candidatos[0]
+        pasta = Path(tempfile.mkdtemp(prefix="jarvis_sessao_"))
         try:
-            con, meta = carregar(path)
+            con, meta = carregar(path, exportar=pasta / "dados.parquet")
         except Exception as exc:  # a mensagem do DuckDB pode citar uma célula: fica só no log local
             print(f"  dados: falha ao ler {path}: {exc}")
+            shutil.rmtree(pasta, ignore_errors=True)
             raise Recusa(f"não consegui ler {path.name} ({type(exc).__name__})") from None
         with self.lock:
             if self.con:
                 self.con.close()
-            self.con, self.arquivo, self.meta, self.resultados = con, path, meta, []
+            if self.pasta:
+                shutil.rmtree(self.pasta, ignore_errors=True)
+            self.pasta = pasta
+            self.con, self.arquivo, self.meta, self.resultados, self.historico = con, path, meta, [], []
+            self.graficos = []
             self.pessoais = colunas_pessoais(con)
+            self.nomes_colunas = list(colunas(con))
+            self.rotulos = rotulos_permitidos(con, self.pessoais, config.K_ANONIMATO)
             resumo = {**meta, **perfil(con, self.pessoais, config.K_ANONIMATO)}
+            if decisoes := memory.decisoes(path.name):
+                resumo["decisoes_anteriores"] = decisoes  # o que ele decidiu da última vez que abriu este arquivo
+            self.resumo = resumo
             if len(candidatos) > 1:
                 resumo["outros_arquivos_parecidos"] = [p.name for p in candidatos[1:5]]
             return self._registrar(resumo)
@@ -429,9 +481,83 @@ class Sessao:
                 j = nomes.index(ordem.lstrip("-"))
                 ok.sort(key=lambda r: (r[j] is None, r[j]), reverse=ordem.startswith("-"))
             limite = max(1, min(int(pedido.get("limite") or limite), 200))
-            return self._registrar({"colunas": [c if c != "__n" else "linhas_no_grupo" for c in nomes],
-                                    "linhas": ok[:limite], "grupos_omitidos_por_terem_menos_de_k_linhas": len(linhas) - len(ok),
-                                    "k": k, "total_de_grupos": len(ok)})
+            resultado = {"colunas": [c if c != "__n" else "linhas_no_grupo" for c in nomes], "linhas": ok[:limite],
+                         "grupos_omitidos_por_terem_menos_de_k_linhas": len(linhas) - len(ok), "k": k,
+                         "total_de_grupos": len(ok)}
+            texto = self._registrar(resultado)
+            self.historico = [{"pedido": pedido, **json.loads(texto)}, *self.historico][:5]
+            return texto
+
+    def comparar(self, nome: str) -> str:
+        """Arquivo aberto (A) contra outra versão (B): linhas iguais e novas, colunas, totais e categorias que mudaram.
+        Tudo agregado: contagens e somas; categorias só com pelo menos K linhas em um dos lados."""
+        with self.lock:
+            self._exigir()
+            candidatos = [p for p in localizar(nome) if p.resolve() != self.arquivo.resolve()]
+            if not candidatos:
+                raise Recusa("não achei outra versão com esse nome nas pastas permitidas")
+            outro = candidatos[0]
+            try:
+                con_b, _ = carregar(outro)
+            except Exception as exc:
+                print(f"  dados: falha ao ler {outro}: {exc}")
+                raise Recusa(f"não consegui ler {outro.name} ({type(exc).__name__})") from None
+            try:
+                k = config.K_ANONIMATO
+                ca, cb = colunas(self.con), colunas(con_b)
+                pessoais = self.pessoais | colunas_pessoais(con_b)
+                comuns = [c for c in ca if c in cb]
+                n_a = self.con.execute("select count(*) from dados").fetchone()[0]
+                n_b = con_b.execute("select count(*) from dados").fetchone()[0]
+                out = {"a": self.arquivo.name, "b": outro.name, "linhas_a": n_a, "linhas_b": n_b,
+                       "colunas_so_em_a": [c for c in ca if c not in cb], "colunas_so_em_b": [c for c in cb if c not in ca],
+                       "tipo_mudou": {c: [ca[c], cb[c]] for c in comuns if ca[c] != cb[c]}}
+                if comuns:  # linhas idênticas pelas colunas em comum; os hashes ficam aqui, só as contagens saem
+                    expr = "hash(" + ", ".join(f'"{c}"' for c in comuns) + ")"
+                    ha = Counter(h for (h,) in self.con.execute(f"select {expr} from dados").fetchall())
+                    hb = Counter(h for (h,) in con_b.execute(f"select {expr} from dados").fetchall())
+                    iguais = sum((ha & hb).values())
+                    out |= {"linhas_iguais": iguais, "linhas_so_em_a": n_a - iguais, "linhas_so_em_b": n_b - iguais}
+                numeros, periodos, categorias = {}, {}, {}
+                for c in comuns:
+                    if c in pessoais or ca[c] != cb[c]:
+                        continue
+                    q = f'"{c}"'
+                    if ca[c].startswith(NUMERICOS):
+                        sa, ma = self.con.execute(f"select round(sum({q}), 4), round(avg({q}), 4) from dados").fetchone()
+                        sb, mb = con_b.execute(f"select round(sum({q}), 4), round(avg({q}), 4) from dados").fetchone()
+                        numeros[c] = {"soma_a": sa, "soma_b": sb, "media_a": ma, "media_b": mb,
+                                      "variacao_soma_pct": round(100 * (sb / sa - 1), 2) if sa else None}
+                    elif ca[c].startswith(DATAS):
+                        periodos[c] = {"a": [str(x) for x in self.con.execute(f"select min({q}), max({q}) from dados").fetchone()],
+                                       "b": [str(x) for x in con_b.execute(f"select min({q}), max({q}) from dados").fetchone()]}
+                    elif ca[c] == "VARCHAR":
+                        conta = f"select {q}, count(*) from dados where {q} is not null group by 1"
+                        va, vb = dict(self.con.execute(conta).fetchall()), dict(con_b.execute(conta).fetchall())
+                        if len(va) > 50 or len(vb) > 50:
+                            continue  # alta cardinalidade: lista de valores, não categorias
+                        mudou = [[v, va.get(v, 0), vb.get(v, 0)] for v in set(va) | set(vb)
+                                 if va.get(v, 0) != vb.get(v, 0) and max(va.get(v, 0), vb.get(v, 0)) >= k]
+                        if mudou:
+                            categorias[c] = sorted(mudou, key=lambda x: -abs(x[2] - x[1]))[:10]
+                out |= {"numericas": numeros, "periodo_das_datas": periodos,
+                        "categorias_que_mudaram_valor_linhas_a_linhas_b": categorias}
+            finally:
+                con_b.close()
+            return self._registrar(out)
+
+    def python(self, codigo: str) -> str:
+        """Código no sandbox (executor.py) sobre o Parquet do arquivo aberto; volta só o que o filtro deixa."""
+        from jarvis import executor  # importa pandas/matplotlib só quando o Python é usado
+        with self.lock:
+            self._exigir()
+            parquet, rotulos = self.pasta / "dados.parquet", set(self.rotulos)
+        out = executor.executar(codigo, parquet, rotulos)
+        with self.lock:
+            self.graficos = [*out.pop("graficos", []), *self.graficos][:4]
+            if self.graficos and out.get("segundos") is not None:
+                out["graficos_no_painel"] = len(self.graficos)
+            return self._registrar(out)
 
     def calcular(self, expressao: str) -> str:
         valor = calcular(expressao)
@@ -440,6 +566,18 @@ class Sessao:
     def _exigir(self) -> None:
         if self.con is None:
             raise Recusa("nenhum arquivo aberto; use abrir_arquivo primeiro")
+
+    def painel(self) -> dict:
+        """O que o painel mostra (o mesmo que o Claude viu: perfil seguro e agregados, nada de linha crua)."""
+        r = self.resumo
+        return {"arquivo": r.get("arquivo"), "linhas": r.get("linhas"), "total_colunas": r.get("total_colunas"),
+                "codificacao": r.get("codificacao"), "separador": r.get("separador"),
+                "colunas": [{k: c.get(k) for k in ("coluna", "tipo", "nulos_pct", "dado_pessoal")} for c in r.get("colunas", [])],
+                "alertas": r.get("alertas", []), "resultados": self.historico, "graficos": self.graficos}
+
+    def conferir_frase(self, frase: str, pergunta: str) -> list[str]:
+        """Durante a fala: números da frase sem origem, se o turno usou dados (não zera a marca)."""
+        return validar(frase, self.resultados, pergunta) if self.usada else []
 
     def conferir_turno(self, resposta: str, pergunta: str) -> list[str]:
         """Depois de um turno que usou dados: números da resposta sem origem. Zera a marca do turno."""

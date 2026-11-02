@@ -15,7 +15,9 @@ import httpx
 from jarvis import config
 from jarvis.keychain import get_secret
 
-SENTENCE = re.compile(r"^(.+?[.!?;:…])(?=\s|$)", re.S)
+# Fim de frase só com espaço depois: no fim do pedaço, "R$ 50." pode ainda virar "R$ 50.657,14" no próximo.
+# A última frase da resposta sai pelo flush().
+SENTENCE = re.compile(r"^(.+?[.!?;:…])(?=\s)", re.S)
 ELEVEN_DEFAULT_VOICE = "pNInz6obpgDQGcFmaJgB"  # voz masculina multilíngue padrão da ElevenLabs
 
 
@@ -34,6 +36,8 @@ class Speaker:
         self.busy = False
         self.on_start: Callable[[], None] = lambda: None
         self.on_stop: Callable[[], None] = lambda: None
+        # Filtro de cada frase do streaming antes de ir para a fila (ex.: número sem origem nos dados)
+        self.guard: Callable[[str], str] | None = None
         self.eleven_key = get_secret("ELEVENLABS_API_KEY")
         self.voice_id = config.ELEVEN_VOICE_ID or ELEVEN_DEFAULT_VOICE
         threading.Thread(target=self._pump, daemon=True, name="tts").start()
@@ -79,6 +83,8 @@ class Speaker:
 
     def _enqueue(self, text: str) -> None:
         text = clean(text)
+        if text and self.guard:
+            text = self.guard(text)
         if text:
             self.say(text)
 

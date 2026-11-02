@@ -1,5 +1,6 @@
 import { MotionConfig } from 'framer-motion'
 import type { ReactNode } from 'react'
+import DataPanel from './components/DataPanel'
 import Footer from './components/Footer'
 import Header from './components/Header'
 import {
@@ -28,8 +29,9 @@ export default function App() {
     <MotionConfig reducedMotion="user">
       <div className="flex min-h-full lg:h-full lg:min-h-[640px]">
         <Sidebar />
-        <main className="flex min-w-0 flex-1 flex-col gap-2.5 px-3 py-3 lg:min-h-0">
+        <main className="relative flex min-w-0 flex-1 flex-col gap-2.5 px-3 py-3 lg:min-h-0">
           <Header />
+          <DataPanel />
 
           {/* desktop: 3 linhas que dividem a altura; telas estreitas: cartões empilhados */}
           <div

@@ -1,4 +1,10 @@
 [
   {"nome": "Educadados", "url": "https://www.educadados.com.br/blog", "modo": "html", "padrao_link": "^/blog/[^/]+$"},
-  {"nome": "Data Hackers", "url": "https://www.datahackers.news/", "modo": "html", "padrao_link": "^/p/[^/]+$"}
+  {"nome": "Data Hackers", "url": "https://www.datahackers.news/", "modo": "html", "padrao_link": "^/p/[^/]+$"},
+  {"nome": "Towards Data Science", "url": "https://towardsdatascience.com/", "modo": "rss", "rss": "https://towardsdatascience.com/feed"},
+  {"nome": "KDnuggets", "url": "https://www.kdnuggets.com/", "modo": "rss", "rss": "https://www.kdnuggets.com/feed"},
+  {"nome": "Databricks", "url": "https://www.databricks.com/blog", "modo": "rss", "rss": "https://www.databricks.com/feed"},
+  {"nome": "DuckDB", "url": "https://duckdb.org/news/", "modo": "rss", "rss": "https://duckdb.org/feed.xml"},
+  {"nome": "dbt Labs", "url": "https://www.getdbt.com/blog", "modo": "rss", "rss": "https://www.getdbt.com/blog/rss.xml"},
+  {"nome": "Google Notícias (dados)", "url": "https://news.google.com/", "modo": "rss", "rss": "https://news.google.com/rss/search?q=%22ci%C3%AAncia+de+dados%22+OR+%22an%C3%A1lise+de+dados%22+OR+%22engenharia+de+dados%22&hl=pt-BR&gl=BR&ceid=BR:pt-419"}
 ]

@@ -1,6 +1,8 @@
 import { create } from 'zustand'
 import type {
   Agent,
+  DataState,
+  KpiItem,
   FeedItem,
   Health,
   MemoryStats,
@@ -16,7 +18,7 @@ const FEED_MAX = 30
 const TRANSCRIPT_MAX = 40
 
 /** Destinos da navegação lateral: 'top' é o Command Center inteiro; os outros são ids de cartões. */
-export type Section = 'top' | 'ai-core' | 'agentes' | 'calendario' | 'memoria' | 'conversa' | 'noticias'
+export type Section = 'top' | 'ai-core' | 'agentes' | 'calendario' | 'memoria' | 'conversa' | 'noticias' | 'dados'
 
 export interface JarvisState {
   connected: boolean
@@ -33,6 +35,10 @@ export interface JarvisState {
   timelineReady: boolean // a 1ª leitura do Calendário já chegou (vazia ou não)
   memory: MemoryStats
   llms: Provider[]
+  data: DataState | null // arquivo aberto e últimos agregados
+  dataOpen: boolean
+  kpis: KpiItem[]
+  uploadStatus: string | null
   focusMode: boolean
   chatOpen: boolean
   section: Section
@@ -43,6 +49,8 @@ export interface JarvisState {
   setPtt: (v: boolean) => void
   setHistory: (h: TranscriptLine[]) => void
   setChatOpen: (v: boolean) => void
+  setDataOpen: (v: boolean) => void
+  setUploadStatus: (v: string | null) => void
   setSection: (s: Section) => void
   markAlertsSeen: () => void
   toggleFocus: () => void
@@ -71,6 +79,8 @@ const blank = () => ({
   timelineReady: false,
   memory: { memories: 0, sessionTurns: 0, toolCalls: 0 },
   llms: [],
+  data: null,
+  kpis: [],
 })
 
 export const useJarvis = create<JarvisState>((set) => ({
@@ -78,6 +88,8 @@ export const useJarvis = create<JarvisState>((set) => ({
   pttDown: false,
   focusMode: false,
   chatOpen: false,
+  dataOpen: false,
+  uploadStatus: null,
   section: 'top',
   alertsSeen: 0,
   ...blank(),
@@ -87,6 +99,8 @@ export const useJarvis = create<JarvisState>((set) => ({
   setPtt: (pttDown) => set({ pttDown }),
   setHistory: (history) => set({ history }),
   setChatOpen: (chatOpen) => set({ chatOpen }),
+  setDataOpen: (dataOpen) => set({ dataOpen }),
+  setUploadStatus: (uploadStatus) => set({ uploadStatus }),
   setSection: (section) => set({ section }),
   markAlertsSeen: () => set({ alertsSeen: Date.now() }),
   toggleFocus: () => set((s) => ({ focusMode: !s.focusMode })),
@@ -122,6 +136,16 @@ export const useJarvis = create<JarvisState>((set) => ({
           return { memory: { memories: msg.memories, sessionTurns: msg.sessionTurns, toolCalls: msg.toolCalls } }
         case 'llms':
           return { llms: msg.providers }
+        case 'kpis':
+          return { kpis: msg.itens }
+        case 'data': {
+          const { type: _t, ...data } = msg
+          // arquivo novo ou resultado novo abre o painel; o mesmo estado repetido não o reabre
+          const novo =
+            data.arquivo !== s.data?.arquivo || data.resultados.length !== s.data?.resultados.length ||
+            JSON.stringify(data.resultados[0]) !== JSON.stringify(s.data?.resultados[0])
+          return { data, dataOpen: s.dataOpen || (s.connected && novo), uploadStatus: null }
+        }
         case 'snapshot': {
           const out: Partial<JarvisState> = {}
           if (msg.feed) out.feed = msg.feed.slice(0, FEED_MAX)
@@ -132,6 +156,8 @@ export const useJarvis = create<JarvisState>((set) => ({
           if (msg.timeline) Object.assign(out, { timeline: msg.timeline.events, timelineReady: true })
           if (msg.memory) out.memory = msg.memory
           if (msg.llms) out.llms = msg.llms.providers
+          if (msg.data) out.data = msg.data
+          if (msg.kpis) out.kpis = msg.kpis.itens
           return out
         }
         default:
