@@ -12,8 +12,9 @@ READ_ONLY_BUILTINS = {
 }
 WRITE_BUILTINS = {"Bash", "Write", "Edit", "MultiEdit", "NotebookEdit", "KillShell", "TaskStop"}
 
-# Servidores in-process do próprio Jarvis: mexem no Mac local de forma reversível, sempre liberados
-OWN_SERVERS = {"mac", "jarvis"}
+# Servidores in-process do próprio Jarvis: mexem no Mac local de forma reversível, sempre liberados.
+# "dados" só lê arquivos das pastas permitidas e devolve agregados; nunca altera o arquivo.
+OWN_SERVERS = {"mac", "jarvis", "dados"}
 # Servidores cuja superfície inteira é busca ou geração
 READ_ONLY_MCP = {"exa", "serper", "serpapi", "mcp-registry"}
 

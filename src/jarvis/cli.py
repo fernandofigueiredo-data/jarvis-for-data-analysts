@@ -2,7 +2,7 @@
 import sys
 import time
 
-from jarvis import router
+from jarvis import dados, router
 from jarvis.brain.agent import Brain, BrainError
 
 
@@ -24,6 +24,8 @@ async def run_text(text: str, speak: bool = False) -> int:
         answer = await brain.ask(text, on_text=lambda d: (sys.stdout.write(d), sys.stdout.flush()),
                                  on_tool=lambda n: print(f"\n  [ferramenta: {n}]"))
         print(f"\n[{int((time.time() - t) * 1000)} ms]")
+        if sem_origem := dados.sessao.conferir_turno(answer, text):
+            print(f"[números sem origem nos dados] {', '.join(sem_origem)}")
         if speak and answer:
             from jarvis.audio.tts import speak_blocking
             speak_blocking(answer)

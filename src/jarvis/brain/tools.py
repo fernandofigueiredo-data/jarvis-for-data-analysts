@@ -5,7 +5,8 @@ from typing import Any
 
 from claude_agent_sdk import create_sdk_mcp_server, tool
 
-from jarvis import agenda, news, telemetry
+from jarvis import agenda, dados, news, telemetry
+from jarvis.events import bus
 from jarvis.mac import actions as mac
 from jarvis.mac.timers import say_duration, timers
 from jarvis.memory import memory
@@ -180,8 +181,65 @@ async def recall(_args):
 JARVIS_TOOLS = [news_latest, news_article, agenda_today, weather_now, remember, recall]
 
 
+async def _dados(fn, *args) -> dict[str, Any]:
+    try:
+        return _ok(await asyncio.to_thread(fn, *args))
+    except dados.Recusa as exc:
+        return _err(str(exc))
+
+
+@tool("abrir_arquivo", "Abre um CSV das pastas de dados do usuário (Downloads, Documentos, Mesa) pelo nome falado "
+      "ou caminho. Devolve linhas, colunas, tipos e alertas de qualidade, sem valores individuais.",
+      {"nome": str})
+async def abrir_arquivo(args):
+    print(f"  abrir_arquivo {args}", flush=True)
+    out = await _dados(dados.sessao.abrir, args["nome"])
+    if not out.get("is_error") and dados.sessao.arquivo:
+        bus.feed_item(f"Arquivo aberto: {dados.sessao.arquivo.name}", "info", "Dados")
+    return out
+
+
+@tool("perfil_arquivo", "Perfil do arquivo aberto: linhas, colunas, tipos, nulos, estatísticas e alertas.", {})
+async def perfil_arquivo(_args):
+    return await _dados(dados.sessao.perfil)
+
+
+_FILTRO = {"type": "object", "properties": {
+    "coluna": {"type": "string"},
+    "op": {"type": "string", "enum": sorted(dados.OPERADORES)},
+    "valor": {"description": "número, texto ou data AAAA-MM-DD; lista para 'in' e [início, fim] para 'entre'"}},
+    "required": ["coluna", "op", "valor"]}
+
+
+@tool("agregar", "Única forma de obter números do arquivo aberto. Calcula métricas agrupadas; grupos com menos de "
+      "K linhas são omitidos. Em 'por', uma coluna de data aceita período: 'data_venda:mes' (ano, trimestre, mes, "
+      "dia_semana, dia). Colunas de dado pessoal (CPF, nome, e-mail) só aceitam contagem e distintos.",
+      {"type": "object", "properties": {
+          "metricas": {"type": "array", "items": {"type": "object", "properties": {
+              "funcao": {"type": "string", "enum": list(dados.METRICAS)},
+              "coluna": {"type": "string", "description": "omita em contagem para contar linhas"}},
+              "required": ["funcao"]}},
+          "por": {"type": "array", "items": {"type": "string"}},
+          "filtros": {"type": "array", "items": _FILTRO},
+          "ordenar": {"type": "string", "description": "nome de uma coluna do resultado; '-' na frente para decrescente"},
+          "limite": {"type": "integer"}},
+       "required": ["metricas"]})
+async def agregar(args):
+    return await _dados(dados.sessao.agregar, args)
+
+
+@tool("calcular", "Calculadora para variações, projeções e razões entre números já obtidos. Use ponto decimal: "
+      "'1765072.7 * 1.125'. Nunca faça conta de cabeça.", {"expressao": str})
+async def calcular(args):
+    return await _dados(dados.sessao.calcular, args["expressao"])
+
+
+DADOS_TOOLS = [abrir_arquivo, perfil_arquivo, agregar, calcular]
+
+
 def servers() -> dict[str, Any]:
     return {
         "mac": create_sdk_mcp_server("mac", tools=MAC_TOOLS),
         "jarvis": create_sdk_mcp_server("jarvis", tools=JARVIS_TOOLS),
+        "dados": create_sdk_mcp_server("dados", tools=DADOS_TOOLS),
     }

@@ -22,6 +22,8 @@ from jarvis.brain.gate import DENY_MESSAGE, WRITE_BUILTINS, decide_tool
 from jarvis.brain.persona import system_prompt
 from jarvis.memory import memory
 
+DATA_EXTENSIONS = (".csv", ".tsv", ".xlsx", ".xls", ".parquet")
+
 
 def configured_mcp_servers() -> dict[str, Any]:
     """MCPs do Claude Code (~/.claude.json). Com setting_sources=[] o SDK não os descobre sozinho."""
@@ -70,6 +72,9 @@ class Brain:
             # O CLI libera sozinho Bash "inofensivo" (ls, cat) sem passar pelo can_use_tool, então no modo
             # leitura as ferramentas de escrita nem existem na sessão
             disallowed_tools=[] if config.ALLOW_WRITES else sorted(WRITE_BUILTINS),
+            # Só agregados vão para o Claude: arquivos de dados nunca entram crus pelo Read/Grep/Glob. Regra de
+            # permissão (e não can_use_tool) porque o CLI libera o Read sem consultar o can_use_tool
+            settings=json.dumps({"permissions": {"deny": [f"Read(//**/*{ext})" for ext in DATA_EXTENSIONS]}}),
         )
 
     async def start(self) -> None:

@@ -8,7 +8,7 @@ import time
 import psutil
 import uvicorn
 
-from jarvis import agenda, config, fillers, news, router, telemetry
+from jarvis import agenda, config, dados, fillers, news, router, telemetry
 from jarvis.audio.recorder import Recorder
 from jarvis.audio.stt import stt
 from jarvis.audio.tts import speaker
@@ -34,7 +34,7 @@ QUICK = {
 
 def agent_for(tool: str) -> str:
     t = tool.lower()
-    if any(k in t for k in ("websearch", "webfetch", "news", "search", "fetch")):
+    if any(k in t for k in ("websearch", "webfetch", "news", "search", "fetch", "mcp__dados__")):
         return "research"
     if any(k in t for k in ("open_url", "chrome", "browser", "playwright")):
         return "browser"
@@ -208,6 +208,10 @@ class Jarvis:
         if answer:
             memory.add_turn("assistant", answer)
             bus.emit({"type": "transcript", "role": "assistant", "text": answer, "final": True})
+        # Todo número sobre os dados tem de ter saído de uma ferramenta; o que não saiu vira aviso no feed
+        if sem_origem := dados.sessao.conferir_turno(answer, text):
+            print(f"  números sem origem: {sem_origem}")
+            bus.feed_item("Número sem origem nos dados", "warn", ", ".join(sem_origem)[:160])
         if not self.speaker.speaking:
             self.set_phase(self.idle_phase())
 

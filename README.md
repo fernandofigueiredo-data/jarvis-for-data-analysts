@@ -36,6 +36,14 @@ Variáveis em `.env` (todas opcionais): `JARVIS_MODEL` (padrão `claude-sonnet-5
 
 Edite [`sources.json`](sources.json). Use `"modo": "rss"` com `"rss": "<url do feed>"` quando o site tiver feed. Sem feed, use `"modo": "html"` com um `padrao_link` que case com o caminho dos artigos. O Jarvis busca as fontes a cada 20 minutos, mostra as novas manchetes no feed e responde "quais as notícias do Data Hackers?".
 
+## Dados (CSV)
+
+"Jarvis, abre o arquivo vendas de outubro" procura um `.csv` ou `.tsv` em Downloads, Documentos e Mesa (até três níveis abaixo; troque com `JARVIS_PASTAS_DADOS`, pastas separadas por `:`). O arquivo pode estar no padrão do Excel brasileiro (cp1252, `;`, vírgula decimal, `R$ 1.234,56`, datas dd/mm/aaaa). Depois pergunte: "qual UF mais fatura?", "e por mês?", "quanto seria com 12% a mais?".
+
+- **Só agregados vão para o Claude.** Ele não lê o arquivo nem escreve SQL: pede métricas, agrupamentos e filtros, e o Jarvis monta a consulta. Grupos com menos de 5 linhas são omitidos (`JARVIS_K_ANONIMATO`). Colunas com cara de dado pessoal (CPF, nome, e-mail, telefone) só aceitam contagem. O `Read`/`Grep` do Claude não abre `.csv`, `.tsv`, `.xlsx`, `.xls` nem `.parquet`.
+- **Todo número sai de uma ferramenta.** As contas vêm do DuckDB ou de uma calculadora; um número da resposta que não aparece em nenhum resultado vira o aviso "Número sem origem nos dados" no feed.
+- O arquivo original nunca é alterado; a leitura acontece numa conexão do DuckDB sem acesso a outros arquivos nem à rede.
+
 ## Apps
 
 Edite [`apps.json`](apps.json): `"chave": "Nome do App"`. Para nomes que o Whisper erra, use a forma longa com `heard_as`.
@@ -57,6 +65,7 @@ mic → VAD → Whisper (pt) → "Ei Jarvis"/Option → rota rápida (regex) →
 - `src/jarvis/router.py`: rota rápida em português
 - `src/jarvis/brain/`: sessão do Claude, persona, bloqueio de permissões e ferramentas in-process
 - `src/jarvis/news.py`, `telemetry.py`, `agenda.py`, `memory.py`: dados do painel
+- `src/jarvis/dados.py`: leitura de CSV, perfil, agregados com anonimato k, calculadora e conferência dos números
 - `ui/`: painel em React + Three.js
 
 ## Créditos
