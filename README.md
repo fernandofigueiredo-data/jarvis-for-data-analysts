@@ -86,6 +86,16 @@ mic → VAD → Whisper (pt) → "Ei Jarvis"/Option → rota rápida (regex) →
 - `src/jarvis/dados.py`: leitura de CSV, perfil, agregados com anonimato k, calculadora e conferência dos números
 - `ui/`: painel em React + Three.js
 
+## Testes
+
+```bash
+uv run pytest                                                 # unidade
+uv run --with playwright playwright install chromium webkit   # uma vez
+uv run --with playwright pytest tests/e2e                     # ponta a ponta, uns 4 minutos
+```
+
+Os de ponta a ponta usam o painel compilado (`ui/dist`) e sobem sozinhos um daemon de teste por módulo (`tests/e2e/daemon_teste.py`): é o Jarvis de verdade, com banco, cache e pastas de dados numa pasta temporária (o `data/` não é tocado) e o que é pago, externo ou lento simulado. O Claude vira um cérebro de roteiro que chama as ferramentas reais; a fala, um `say` falso; clima, notícias e Calendário, dados fixos. Um teste é reprovado se a página tiver erro de console ou requisição com falha que ele não provocou de propósito; o registro fica em `tests/e2e/saida/`.
+
 ## Créditos
 
 Ideias de dois projetos abertos:

@@ -10,3 +10,6 @@ ui/node_modules/
 ui/dist/
 dist/
 build/
+
+# saída dos testes de ponta a ponta (registro de console e prints de falha)
+tests/e2e/saida/

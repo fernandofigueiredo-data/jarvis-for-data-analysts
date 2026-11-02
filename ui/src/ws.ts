@@ -9,8 +9,10 @@ function resolveUrl(): string {
   const q = new URLSearchParams(location.search).get('ws')
   if (q) return q
   if (import.meta.env.VITE_WS_URL) return import.meta.env.VITE_WS_URL as string
-  // servido pelo próprio daemon → mesma origem
-  if (location.port === '8787') return `${location.protocol === 'https:' ? 'wss' : 'ws'}://${location.host}/ws`
+  // servido pelo próprio daemon (em qualquer JARVIS_PORT) → mesma origem; o `npm run dev` (5173) e o
+  // `npm run preview` (4173) usam o daemon na porta padrão
+  if (location.protocol.startsWith('http') && !['5173', '4173'].includes(location.port))
+    return `${location.protocol === 'https:' ? 'wss' : 'ws'}://${location.host}/ws`
   return DEFAULT_URL
 }
 

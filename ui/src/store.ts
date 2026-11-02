@@ -140,10 +140,11 @@ export const useJarvis = create<JarvisState>((set) => ({
           return { kpis: msg.itens }
         case 'data': {
           const { type: _t, ...data } = msg
-          // arquivo novo ou resultado novo abre o painel; o mesmo estado repetido não o reabre
+          // arquivo novo, resultado novo ou gráfico novo (Python isolado) abre o painel; o mesmo estado repetido não o reabre
           const novo =
             data.arquivo !== s.data?.arquivo || data.resultados.length !== s.data?.resultados.length ||
-            JSON.stringify(data.resultados[0]) !== JSON.stringify(s.data?.resultados[0])
+            JSON.stringify(data.resultados[0]) !== JSON.stringify(s.data?.resultados[0]) ||
+            data.graficos?.[0]?.url !== s.data?.graficos?.[0]?.url
           return { data, dataOpen: s.dataOpen || (s.connected && novo), uploadStatus: null }
         }
         case 'snapshot': {

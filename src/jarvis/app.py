@@ -118,6 +118,10 @@ class Jarvis:
         }})
         bus.emit({"type": "llms", "providers": llms})
         bus.emit({"type": "memory", **stats})
+        self.publish_agents()
+
+    def publish_agents(self) -> None:
+        """Também no uso de cada ferramenta: o cartão acende enquanto ele trabalha, não no próximo ciclo de 10 s."""
         bus.emit({"type": "agents", "agents": [
             {"id": k, "name": n, "status": "active" if time.time() - self.agent_seen.get(k, 0) < 10 else "standby"}
             for k, n in AGENTS]})
@@ -206,6 +210,7 @@ class Jarvis:
         def on_tool(name: str) -> None:
             nonlocal filled
             self.agent_seen["coding"] = time.time()
+            self.publish_agents()
             if self.phase != "speaking":
                 self.set_phase("tooling")
             if not filled:
@@ -245,6 +250,7 @@ class Jarvis:
         replies = []
         for r in routes:
             self.agent_seen["task" if r.name.startswith("timer") else "system"] = time.time()
+            self.publish_agents()
             try:
                 if r.speak_first and r.reply:
                     self.speaker.say(r.reply)
@@ -277,6 +283,7 @@ class Jarvis:
         def on_tool(name: str) -> None:
             nonlocal filled
             self.agent_seen[agent_for(name)] = time.time()
+            self.publish_agents()
             if self.phase != "speaking":
                 self.set_phase("tooling")
             if not filled and not parts:
