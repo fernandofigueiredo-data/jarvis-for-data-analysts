@@ -33,7 +33,10 @@ function open() {
   ws.onopen = () => {
     attempt = 0
     stopMock()
+    // o snapshot do daemon só traz o que ele já mediu: o resto fica vazio, não com valores da demonstração
+    useJarvis.getState().reset()
     useJarvis.getState().setConnected(true)
+    loadHistory()
   }
   ws.onmessage = (ev) => {
     if (typeof ev.data !== 'string') return
@@ -52,6 +55,17 @@ function open() {
     startMock()
     scheduleRetry()
   }
+}
+
+/** Conversas anteriores (SQLite do daemon). A API não libera CORS, então só quando o painel é servido pelo daemon. */
+function loadHistory() {
+  if (new URL(url).host !== location.host) return
+  fetch('./api/conversations')
+    .then((r) => (r.ok ? r.json() : []))
+    .then((rows: { role: 'user' | 'assistant'; text: string }[]) =>
+      useJarvis.getState().setHistory(rows.map((r) => ({ role: r.role, text: r.text, final: true }))),
+    )
+    .catch(() => {})
 }
 
 function scheduleRetry() {

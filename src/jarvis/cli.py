@@ -3,7 +3,7 @@ import sys
 import time
 
 from jarvis import router
-from jarvis.brain.agent import Brain
+from jarvis.brain.agent import Brain, BrainError
 
 
 async def run_text(text: str, speak: bool = False) -> int:
@@ -27,6 +27,9 @@ async def run_text(text: str, speak: bool = False) -> int:
         if speak and answer:
             from jarvis.audio.tts import speak_blocking
             speak_blocking(answer)
+    except BrainError as exc:
+        print(f"[o Claude não respondeu] {exc}")
+        return 1
     finally:
         await brain.stop()
     return 0

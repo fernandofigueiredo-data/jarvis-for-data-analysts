@@ -1,4 +1,5 @@
 import { Canvas, useFrame } from '@react-three/fiber'
+import { useReducedMotion } from 'framer-motion'
 import { useMemo, useRef } from 'react'
 import * as THREE from 'three'
 import { useJarvis } from '../store'
@@ -76,6 +77,9 @@ function CoreScene() {
   const dust = useRef<THREE.Points>(null!)
 
   const state = useRef({ color: new THREE.Color(PHASE_COLOR.idle), speed: SPEED.idle, glow: GLOW.idle, level: 0 })
+  // Reduzir Movimento: a cor ainda acompanha a fase, mas nada gira nem pulsa (o valor muda ao vivo)
+  const still = useRef(false)
+  still.current = useReducedMotion() ?? false
 
   const tex = useMemo(glowTexture, [])
 
@@ -212,6 +216,13 @@ function CoreScene() {
     mats.hub.color.copy(light)
     mats.satGlow.color.copy(s.color)
     atmosphere.uniforms.uColor.value.copy(s.color)
+
+    if (still.current) {
+      pulse.current.scale.setScalar(1)
+      atmosphere.uniforms.uIntensity.value = s.glow
+      sats.current.forEach((m, i) => m && m.position.set(Math.cos(i * 2) * ringDefs[i].r, 0, Math.sin(i * 2) * ringDefs[i].r))
+      return
+    }
 
     let amp = 0.012 * Math.sin(t * 1.3)
     if (phase === 'listening') amp = 0.035 * Math.sin(t * 4.5)

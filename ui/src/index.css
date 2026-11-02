@@ -46,6 +46,21 @@ body {
   background: rgba(34, 211, 238, 0.3);
 }
 
+/* Anel de foco para quem navega pelo teclado (o clique do mouse não acende). Fica fora das camadas do
+   Tailwind de propósito: vence um `outline-none` esquecido num componente. */
+:where(button, a, [role='button'], [tabindex]:not([tabindex='-1'])):focus-visible {
+  outline: 2px solid var(--color-jv-cyan-soft);
+  outline-offset: 2px;
+}
+/* campos dentro de cápsulas: o anel vai na cápsula inteira */
+.field-ring:focus-within {
+  outline: 2px solid var(--color-jv-cyan-soft);
+  outline-offset: 2px;
+}
+.field-ring button:focus-visible {
+  outline: none;
+}
+
 /* cartão de vidro */
 .glass {
   position: relative;
@@ -58,6 +73,14 @@ body {
     inset 0 0 30px -18px rgba(34, 211, 238, 0.35);
   backdrop-filter: blur(14px);
   -webkit-backdrop-filter: blur(14px);
+}
+/* vidro que flutua sobre outros cartões (conversa, menus): quase opaco, senão o texto de trás atravessa */
+.glass.glass-solid {
+  background: linear-gradient(180deg, rgba(13, 31, 54, 0.97), rgba(7, 17, 32, 0.98));
+  box-shadow:
+    0 18px 48px -12px rgba(0, 0, 0, 0.75),
+    0 0 22px -10px rgba(34, 211, 238, 0.45),
+    inset 0 1px 0 rgba(255, 255, 255, 0.04);
 }
 .glass::before {
   /* fio de luz no topo */
@@ -153,6 +176,24 @@ body {
   animation: jv-blink 1.6s ease-in-out infinite;
 }
 
+/* cartão escolhido na navegação lateral */
+@keyframes jv-spotlight {
+  0%,
+  60% {
+    box-shadow:
+      0 0 0 1px rgba(103, 232, 249, 0.85),
+      0 0 32px -6px rgba(34, 211, 238, 0.9);
+  }
+  100% {
+    box-shadow:
+      0 0 22px -10px rgba(34, 211, 238, 0.45),
+      inset 0 1px 0 rgba(255, 255, 255, 0.04);
+  }
+}
+.spotlight {
+  animation: jv-spotlight 1.6s ease-out;
+}
+
 .scroll-thin {
   scrollbar-width: thin;
   scrollbar-color: rgba(34, 211, 238, 0.25) transparent;
@@ -163,5 +204,13 @@ body {
   .pulse-ring,
   .blink {
     animation: none;
+  }
+  /* o destaque da navegação continua, só sem a transição */
+  .spotlight {
+    animation-duration: 1ms;
+    animation-delay: 1.2s;
+    box-shadow:
+      0 0 0 1px rgba(103, 232, 249, 0.85),
+      0 0 32px -6px rgba(34, 211, 238, 0.9);
   }
 }

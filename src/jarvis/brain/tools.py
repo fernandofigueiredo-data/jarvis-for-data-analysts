@@ -150,7 +150,9 @@ async def news_article(args):
 
 @tool("agenda_today", "Compromissos de hoje do app Calendário.", {})
 async def agenda_today(_args):
-    events = await asyncio.to_thread(agenda.today)
+    events = await asyncio.to_thread(agenda.today, 15)
+    if events is None:
+        return _ok("A agenda ainda está sendo lida do Calendário. Diga isso e sugira perguntar de novo em um minuto.")
     return _ok(json.dumps(events, ensure_ascii=False) if events else "Nenhum compromisso hoje.")
 
 

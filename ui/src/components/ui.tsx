@@ -1,13 +1,15 @@
-import type { CSSProperties, ReactNode } from 'react'
+import { useEffect, useRef, type CSSProperties, type ReactNode } from 'react'
 import type { Phase } from '../types'
 
 export function Card({
+  id,
   title,
   right,
   children,
   className = '',
   bodyClassName = '',
 }: {
+  id?: string // destino da navegação lateral
   title: string
   right?: ReactNode
   children: ReactNode
@@ -15,7 +17,11 @@ export function Card({
   bodyClassName?: string
 }) {
   return (
-    <section className={`glass flex min-h-0 min-w-0 flex-col p-3 ${className}`}>
+    <section
+      id={id}
+      tabIndex={id ? -1 : undefined}
+      className={`glass flex min-h-0 min-w-0 flex-col p-3 focus:outline-none ${className}`}
+    >
       <header className="mb-2 flex shrink-0 items-center justify-between gap-2">
         <h2 className="card-title">{title}</h2>
         {right}
@@ -23,6 +29,68 @@ export function Card({
       <div className={`min-h-0 flex-1 ${bodyClassName}`}>{children}</div>
     </section>
   )
+}
+
+/** Painel flutuante preso ao botão que o abre (o pai precisa ser `relative`). Fecha com Esc ou clique fora. */
+export function Popover({
+  open,
+  onClose,
+  label,
+  children,
+  align = 'right',
+}: {
+  open: boolean
+  onClose: () => void
+  label: string
+  children: ReactNode
+  align?: 'left' | 'right'
+}) {
+  const box = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    if (!open) return
+    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onClose()
+    const onDown = (e: PointerEvent) => {
+      if (!box.current?.parentElement?.contains(e.target as Node)) onClose()
+    }
+    document.addEventListener('keydown', onKey)
+    document.addEventListener('pointerdown', onDown)
+    box.current?.focus()
+    return () => {
+      document.removeEventListener('keydown', onKey)
+      document.removeEventListener('pointerdown', onDown)
+    }
+  }, [open, onClose])
+  if (!open) return null
+  // o .glass (fora das camadas do Tailwind) força position: relative, então ele fica por dentro do diálogo
+  return (
+    <div
+      ref={box}
+      role="dialog"
+      aria-label={label}
+      tabIndex={-1}
+      className={`absolute top-[calc(100%+8px)] z-40 w-[min(300px,calc(100vw-24px))] text-left focus:outline-none ${
+        align === 'left' ? 'left-0' : 'right-0'
+      }`}
+    >
+      <div className="glass glass-solid p-3">
+        <div className="card-title mb-2">{label}</div>
+        {children}
+      </div>
+    </div>
+  )
+}
+
+/** Destaca e foca um cartão quando a navegação lateral leva até ele. */
+export const prefersStill = () => window.matchMedia('(prefers-reduced-motion: reduce)').matches
+
+export function spotlight(el: HTMLElement | null) {
+  if (!el) return
+  el.scrollIntoView({ behavior: prefersStill() ? 'auto' : 'smooth', block: 'nearest' })
+  el.focus({ preventScroll: true })
+  el.classList.remove('spotlight')
+  void el.offsetWidth // reinicia a animação se o mesmo cartão for escolhido de novo
+  el.classList.add('spotlight')
+  el.addEventListener('animationend', () => el.classList.remove('spotlight'), { once: true })
 }
 
 const TONES = {
@@ -38,7 +106,7 @@ export type Tone = keyof typeof TONES
 export function Chip({ tone = 'cyan', children, className = '' }: { tone?: Tone; children: ReactNode; className?: string }) {
   return (
     <span
-      className={`inline-flex shrink-0 items-center gap-1 rounded-[5px] border px-1.5 py-[1px] text-[9px] font-semibold uppercase tracking-[0.12em] ${TONES[tone]} ${className}`}
+      className={`inline-flex shrink-0 items-center gap-1 rounded-[5px] border px-1.5 py-[1px] text-[10px] font-semibold uppercase tracking-[0.12em] ${TONES[tone]} ${className}`}
     >
       {children}
     </span>

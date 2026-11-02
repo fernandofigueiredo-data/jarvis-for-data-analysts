@@ -8,7 +8,7 @@ import time
 import psutil
 import uvicorn
 
-from jarvis import config, fillers, news, router, telemetry
+from jarvis import agenda, config, fillers, news, router, telemetry
 from jarvis.audio.recorder import Recorder
 from jarvis.audio.stt import stt
 from jarvis.audio.tts import speaker
@@ -22,13 +22,13 @@ CHIME = "/System/Library/Sounds/Tink.aiff"
 ALARM = "/System/Library/Sounds/Glass.aiff"
 AGENTS = [("coding", "Agente de Código"), ("research", "Agente de Pesquisa"), ("memory", "Agente de Memória"),
           ("browser", "Agente de Navegação"), ("task", "Agente de Tarefas"), ("system", "Agente de Sistema")]
+# id do botão do painel -> (o que aparece na conversa, o que o Claude recebe)
 QUICK = {
-    "briefing": "Faça meu briefing executivo de hoje: use agenda_today, timer_list e news_latest (3 manchetes). "
-                "No máximo cinco frases faladas.",
-    "news": "Quais as últimas notícias das minhas fontes?",
-    "agenda": "O que tenho na agenda hoje?",
-    "new_task": "Quero criar uma tarefa. Pergunte o que é, em uma frase.",
-    "voice": None,
+    "briefing": ("Briefing executivo", "Faça meu briefing executivo de hoje: use agenda_today, timer_list e "
+                                       "news_latest (3 manchetes). No máximo cinco frases faladas."),
+    "news": ("Resumo de notícias", "Quais as últimas notícias das minhas fontes?"),
+    "agenda": ("O que tenho na agenda hoje?", "O que tenho na agenda hoje?"),
+    "new_task": ("Iniciar tarefa", "Quero criar uma tarefa. Pergunte o que é, em uma frase."),
 }
 
 
@@ -112,21 +112,17 @@ class Jarvis:
         psutil.cpu_percent(interval=None)
         tick = 0
         while True:
-            sys_ = await asyncio.to_thread(telemetry.system)
-            payload = {"type": "telemetry", **sys_}
-            if tick % 15 == 0:  # rede, clima e agenda são mais caros: a cada 30 s
-                place = await asyncio.to_thread(telemetry.place)
-                payload |= {"network": await asyncio.to_thread(telemetry.network),
-                            "weather": await asyncio.to_thread(telemetry.weather), "location": place["name"]}
-                self._net = {k: payload[k] for k in ("network", "weather", "location")}
-                if tick % 150 == 0:
-                    from jarvis import agenda
-                    bus.emit({"type": "timeline", "events": await asyncio.to_thread(agenda.today)})
-            else:
-                payload |= getattr(self, "_net", {})
-            bus.emit(payload)
+            payload = {"type": "telemetry", **await asyncio.to_thread(telemetry.system), **getattr(self, "_net", {})}
+            if tick == 0:
+                bus.emit(payload)  # CPU/RAM/disco já; saúde, rede e clima podem levar alguns segundos
             if tick % 5 == 0:
                 await asyncio.to_thread(self.publish_health)
+            if tick % 15 == 0:  # rede e clima são mais caros: a cada 30 s
+                place = await asyncio.to_thread(telemetry.place)
+                self._net = {"network": await asyncio.to_thread(telemetry.network),
+                             "weather": await asyncio.to_thread(telemetry.weather), "location": place["name"]}
+                payload |= self._net
+            bus.emit(payload)
             tick += 1
             await asyncio.sleep(2)
 
@@ -139,13 +135,14 @@ class Jarvis:
                           "level": 0.5 if self.phase == "speaking" else self.recorder.level})
 
     # ------------------------------------------------------------------ um turno
-    async def handle(self, text: str) -> None:
+    async def handle(self, text: str, shown: str | None = None) -> None:
+        """`shown` é o que aparece na conversa quando o texto enviado ao Claude é um prompt interno."""
         text = text.strip()
         if not text:
             return
         print(f"\n> {text}")
-        bus.emit({"type": "transcript", "role": "user", "text": text, "final": True})
-        memory.add_turn("user", text)
+        bus.emit({"type": "transcript", "role": "user", "text": shown or text, "final": True})
+        memory.add_turn("user", shown or text)
         self.armed_until = 0
         routes = router.route(text)
         if routes:
@@ -200,11 +197,13 @@ class Jarvis:
 
         try:
             answer = await self.brain.ask(text, on_text, on_tool)
+            self.brain_ready = True
         except Exception as exc:
             print(f"  cérebro falhou: {exc}")
             answer = "Infelizmente o cérebro não respondeu, senhor."
             self.speaker.say(answer)
             self.brain_ready = False
+            bus.feed_item("O Claude não respondeu", "warn", str(exc)[:160])
         self.speaker.flush()
         if answer:
             memory.add_turn("assistant", answer)
@@ -212,15 +211,19 @@ class Jarvis:
         if not self.speaker.speaking:
             self.set_phase(self.idle_phase())
 
-    def submit(self, text: str) -> None:
+    def submit(self, text: str, shown: str | None = None) -> None:
         """De qualquer thread: começa um turno, interrompendo o anterior se houver."""
         def start() -> None:
-            self.turn = asyncio.ensure_future(self._run_turn(text))
+            self.turn = asyncio.ensure_future(self._run_turn(text, shown, self.turn))
         self.loop.call_soon_threadsafe(start)
 
-    async def _run_turn(self, text: str) -> None:
+    async def _run_turn(self, text: str, shown: str | None = None, prev: asyncio.Future | None = None) -> None:
         await self.interrupt()
-        await self.handle(text)
+        if prev and not prev.done():
+            # O turno cortado publica o fim da resposta dele antes de a nova pergunta entrar na conversa.
+            # Não atrasa nada: o cérebro só aceita a próxima pergunta depois de fechar a anterior.
+            await asyncio.wait({prev}, timeout=10)
+        await self.handle(text, shown)
 
     async def interrupt(self) -> None:
         """Barge-in: corta a fala e a geração."""
@@ -230,15 +233,17 @@ class Jarvis:
     # ------------------------------------------------------------------ comandos do painel
     async def on_client(self, msg: dict) -> None:
         kind = msg.get("type")
-        if kind == "say" and msg.get("text"):
+        if kind == "say" and isinstance(msg.get("text"), str) and msg["text"].strip():
             self.submit(msg["text"])
         elif kind == "command":
-            prompt = QUICK.get(msg.get("id", ""))
-            if prompt:
-                self.submit(prompt)
+            if quick := QUICK.get(msg.get("id", "")):
+                self.submit(quick[1], shown=quick[0])
             elif msg.get("id") == "voice":
                 self.arm()
-        elif kind == "ptt" and self.recorder:
+        elif kind == "ptt" and not self.recorder:
+            if msg.get("down"):
+                self.voice_unavailable()
+        elif kind == "ptt":
             if msg.get("down"):
                 await self.interrupt()
                 self.recorder.press()
@@ -249,9 +254,24 @@ class Jarvis:
 
     # ------------------------------------------------------------------ voz
     def arm(self) -> None:
+        if not (self.recorder and self.recorder.listening):
+            # Sem escuta contínua (modo ptt/off) ninguém fecharia a janela e a fase ficaria em "ouvindo"
+            self.voice_unavailable()
+            return
         self.armed_until = time.time() + WINDOW_S
         subprocess.Popen(["afplay", CHIME])
         self.set_phase("listening")
+
+    def voice_unavailable(self) -> None:
+        """Pedido de voz que este modo não atende: avisa no painel em vez de ficar calado."""
+        if self.mode == "off":
+            bus.feed_item("Voz desligada", "tip", "O Jarvis foi aberto com --mode off: digite no rodapé ou reabra sem essa opção")
+        elif self.recorder is None:
+            bus.feed_item("Microfone indisponível", "warn", "Libere em Privacidade e Segurança › Microfone e reabra o Jarvis")
+        else:
+            bus.feed_item("Segure para falar", "tip", "Modo push-to-talk: segure o Option direito ou o botão do microfone")
+        if not self.busy and not self.speaker.speaking:
+            self.set_phase(self.idle_phase())
 
     def _ptt_turn(self, audio) -> None:
         if len(audio) < config.SAMPLE_RATE * 0.3:
@@ -348,6 +368,7 @@ class Jarvis:
         timers.on_change = lambda: bus.emit({"type": "timers", "timers": timers.snapshot()})
         timers.start()
         news.start_loop()
+        agenda.start_loop(lambda events: bus.emit({"type": "timeline", "events": events}))
         self.set_phase("idle")
         print(f"[jarvis] painel em http://{config.HOST}:{config.PORT} · modelo {config.MODEL} · "
               f"escrita {'LIGADA' if config.ALLOW_WRITES else 'desligada'} · voz {self.speaker.engine}")
@@ -358,6 +379,7 @@ class Jarvis:
         except Exception as exc:
             print(f"[jarvis] cérebro não conectou: {exc}")
             bus.feed_item("Claude Code não conectou", "warn", str(exc)[:120])
+        await asyncio.to_thread(self.publish_health)  # o painel não espera o próximo ciclo para saber
 
     def start_background(self) -> None:
         def run_loop() -> None:

@@ -1,4 +1,4 @@
-import { AnimatePresence, motion } from 'framer-motion'
+import { AnimatePresence, motion, useReducedMotion } from 'framer-motion'
 import {
   Activity,
   AlertTriangle,
@@ -50,7 +50,7 @@ const CORE_TILES: { key: HealthKey; label: string; icon: LucideIcon; color: stri
 export function CoreOverview() {
   const health = useJarvis((s) => s.health)
   return (
-    <Card title="Visão geral do AI Core" bodyClassName="grid grid-cols-1 gap-1 auto-rows-fr">
+    <Card id="ai-core" title="Visão geral do AI Core" bodyClassName="grid grid-cols-1 gap-1 auto-rows-fr">
       {CORE_TILES.map(({ key, label, icon: Icon, color }) => {
         const h = health[key]
         return (
@@ -63,7 +63,7 @@ export function CoreOverview() {
             </span>
             <span className="min-w-0 flex-1 leading-tight">
               <span className="block truncate text-[11px] font-medium text-cyan-50">{label}</span>
-              <span className={`block truncate text-[9.5px] ${STATUS_TEXT[h.status]}`}>{h.detail}</span>
+              <span className={`block truncate text-[10px] ${STATUS_TEXT[h.status]}`}>{h.detail}</span>
             </span>
             <Dot tone={statusTone[h.status]} />
           </div>
@@ -140,6 +140,7 @@ export function IntelFeed() {
   const items = all ? feed : feed.slice(0, 5)
   return (
     <Card
+      id="noticias"
       title="Feed de inteligência"
       right={
         <Chip tone="red">
@@ -153,6 +154,22 @@ export function IntelFeed() {
           {items.map((it) => {
             const m = FEED_META[it.kind] ?? FEED_META.info
             const Icon = m.icon
+            const body = (
+              <>
+                <span className="grid h-6 w-6 shrink-0 place-items-center rounded-md" style={{ background: `${m.color}1a` }}>
+                  <Icon size={12} style={{ color: m.color }} />
+                </span>
+                <div className="min-w-0 flex-1 leading-tight">
+                  <div className="truncate text-[11.5px] text-cyan-50">{it.title}</div>
+                  <div className="truncate text-[10px] text-slate-400">
+                    {it.subtitle ? `${it.subtitle} · ` : ''}
+                    {timeAgo(it.ts)}
+                  </div>
+                </div>
+                <Chip tone={m.tone}>{m.tag}</Chip>
+              </>
+            )
+            const row = 'flex min-w-0 flex-1 items-center gap-2 rounded-md px-1 py-[5px]'
             return (
               <motion.li
                 key={it.id}
@@ -161,27 +178,24 @@ export function IntelFeed() {
                 animate={{ opacity: 1, x: 0 }}
                 exit={{ opacity: 0 }}
                 transition={{ duration: 0.25 }}
-                onClick={() => it.url && window.open(it.url, '_blank', 'noopener')}
-                className={`flex min-w-0 items-center gap-2 rounded-md border-b border-cyan-400/[0.07] px-1 py-[5px] ${it.url ? 'cursor-pointer hover:bg-cyan-400/5' : ''}`}
+                title={it.title}
+                className="flex min-w-0 border-b border-cyan-400/[0.07]"
               >
-                <span className="grid h-6 w-6 shrink-0 place-items-center rounded-md" style={{ background: `${m.color}1a` }}>
-                  <Icon size={12} style={{ color: m.color }} />
-                </span>
-                <div className="min-w-0 flex-1 leading-tight">
-                  <div className="truncate text-[11.5px] text-cyan-50">{it.title}</div>
-                  <div className="truncate text-[9.5px] text-slate-500">
-                    {it.subtitle ? `${it.subtitle} · ` : ''}
-                    {timeAgo(it.ts)}
-                  </div>
-                </div>
-                <Chip tone={m.tone}>{m.tag}</Chip>
+                {it.url ? (
+                  <a tabIndex={0} href={it.url} target="_blank" rel="noopener noreferrer" className={`${row} hover:bg-cyan-400/5`}>
+                    {body}
+                  </a>
+                ) : (
+                  <div className={row}>{body}</div>
+                )}
               </motion.li>
             )
           })}
         </AnimatePresence>
-        {feed.length === 0 && <li className="py-4 text-center text-[11px] text-slate-500">Sem eventos ainda</li>}
+        {feed.length === 0 && <li className="py-4 text-center text-[11px] text-slate-400">Sem eventos ainda</li>}
       </ul>
       <button
+        tabIndex={0}
         onClick={() => setAll((v) => !v)}
         className="mt-1.5 flex shrink-0 items-center gap-0.5 self-start text-[10.5px] text-cyan-300 hover:text-cyan-100"
       >
@@ -212,6 +226,7 @@ export function ActiveAgents() {
   const active = agents.filter((a) => a.status === 'active').length
   return (
     <Card
+      id="agentes"
       title="Agentes ativos"
       right={<span className="text-[10px] text-slate-400">{active} em execução</span>}
       bodyClassName="grid grid-cols-3 gap-1.5 auto-rows-fr"
@@ -230,11 +245,20 @@ export function ActiveAgents() {
                 {shortAgentName(a.name)}
               </span>
             </div>
-            <div className="flex items-center justify-between gap-1">
-              <span className={`text-[9px] font-semibold tracking-wider uppercase ${on ? 'text-emerald-300' : 'text-slate-500'}`}>
+            {/* o rótulo não quebra; a onda (decorativa) é que cede espaço em tiles estreitos */}
+            <div className="flex min-w-0 items-center justify-between gap-1">
+              <span className={`shrink-0 text-[10px] font-semibold tracking-wide whitespace-nowrap uppercase ${on ? 'text-emerald-300' : 'text-slate-400'}`}>
                 {on ? 'Ativo' : 'Em espera'}
               </span>
-              <Waveform bars={7} active={on} height={12} barWidth={2} gap={1.5} color={on ? '#34d399' : '#475569'} />
+              <Waveform
+                bars={7}
+                active={on}
+                height={12}
+                barWidth={2}
+                gap={1.5}
+                color={on ? '#34d399' : '#475569'}
+                className="min-w-0 overflow-hidden"
+              />
             </div>
           </div>
         )
@@ -249,10 +273,13 @@ const isDone = (s: string) => /conclu|done|feito|ok/i.test(s)
 
 export function MissionTimeline() {
   const events = useJarvis((s) => s.timeline)
+  // conectado e ainda sem a 1ª leitura do Calendário (pode levar um minuto): "carregando", não "nada agendado"
+  const loading = useJarvis((s) => s.connected && !s.timelineReady)
   const doneCount = events.filter((e) => isDone(e.status)).length
   const pct = events.length ? (doneCount / events.length) * 100 : 0
   return (
     <Card
+      id="calendario"
       title="Linha do tempo da missão"
       right={<span className="text-[10px] text-slate-400">{doneCount}/{events.length}</span>}
       bodyClassName="flex flex-col"
@@ -280,7 +307,11 @@ export function MissionTimeline() {
             </li>
           )
         })}
-        {events.length === 0 && <li className="py-4 text-center text-[11px] text-slate-500">Nada agendado</li>}
+        {events.length === 0 && (
+          <li className="py-4 text-center text-[11px] text-slate-400">
+            {loading ? 'Lendo a agenda do Calendário…' : 'Nada agendado para hoje'}
+          </li>
+        )}
       </ol>
     </Card>
   )
@@ -289,21 +320,37 @@ export function MissionTimeline() {
 /* ───────────── QUICK COMMANDS ───────────── */
 
 // ids aceitos pelo daemon: briefing (rodapé), news, agenda, new_task, voice
-const COMMANDS: { id: string; label: string; icon: LucideIcon; color: string }[] = [
-  { id: 'new_task', label: 'Iniciar tarefa', icon: Play, color: '#22d3ee' },
-  { id: 'agenda', label: 'Abrir calendário', icon: CalendarDays, color: '#a78bfa' },
-  { id: 'voice', label: 'Iniciar conversa por voz', icon: Mic, color: '#34d399' },
-  { id: 'news', label: 'Resumo de notícias', icon: Newspaper, color: '#fbbf24' },
+const COMMANDS: { id: string; label: string; icon: LucideIcon; color: string; hint: string }[] = [
+  {
+    id: 'new_task',
+    label: 'Iniciar tarefa',
+    icon: Play,
+    color: '#22d3ee',
+    hint: 'O Jarvis pergunta a tarefa. Gravar no Todoist exige abrir o Jarvis com --writes.',
+  },
+  { id: 'agenda', label: 'Abrir calendário', icon: CalendarDays, color: '#a78bfa', hint: 'O Jarvis lê os compromissos de hoje.' },
+  {
+    id: 'voice',
+    label: 'Iniciar conversa por voz',
+    icon: Mic,
+    color: '#34d399',
+    hint: 'A próxima frase vale sem dizer “Jarvis” (só com a escuta contínua ligada).',
+  },
+  { id: 'news', label: 'Resumo de notícias', icon: Newspaper, color: '#fbbf24', hint: 'O Jarvis resume as manchetes das suas fontes.' },
 ]
 
 export function QuickCommands() {
   return (
     <Card title="Comandos rápidos" bodyClassName="grid grid-cols-1 gap-1.5 auto-rows-fr">
-      {COMMANDS.map(({ id, label, icon: Icon, color }) => (
+      {COMMANDS.map(({ id, label, icon: Icon, color, hint }) => (
         <motion.button
           key={id}
+          title={hint}
           whileTap={{ scale: 0.97 }}
-          onClick={() => send({ type: 'command', id })}
+          onClick={() => {
+            send({ type: 'command', id })
+            if (id !== 'voice') useJarvis.getState().setChatOpen(true)
+          }}
           className="tile group flex min-w-0 items-center gap-2 px-2.5 text-left transition-colors hover:border-cyan-400/40 hover:bg-cyan-400/5"
         >
           <span className="grid h-6 w-6 shrink-0 place-items-center rounded-md" style={{ background: `${color}1f` }}>
@@ -346,7 +393,7 @@ function Ring({ label, value, color, icon: Icon }: { label: string; value: numbe
           <span className="font-mono text-[13px] font-semibold text-cyan-50 tabular-nums">{Math.round(v)}%</span>
         </div>
       </div>
-      <div className="flex items-center gap-1 text-[9.5px] font-semibold tracking-[0.14em] text-slate-400 uppercase">
+      <div className="flex items-center gap-1 text-[10px] font-semibold tracking-[0.14em] text-slate-400 uppercase">
         <Icon size={10} style={{ color }} />
         {label}
       </div>
@@ -368,6 +415,7 @@ export function SystemMonitor() {
 /* ───────────── MEMORY INSIGHTS ───────────── */
 
 function Constellation() {
+  const still = useReducedMotion()
   const { nodes, edges } = useMemo(() => {
     let seed = 11
     const rand = () => ((seed = (seed * 16807) % 2147483647) - 1) / 2147483646
@@ -395,7 +443,7 @@ function Constellation() {
       ))}
       {nodes.map((n, i) => (
         <circle key={i} cx={n.x} cy={n.y} r={n.r} fill={n.c} style={{ filter: `drop-shadow(0 0 2px ${n.c})` }}>
-          <animate attributeName="opacity" values="1;0.35;1" dur={`${2 + (i % 5) * 0.7}s`} repeatCount="indefinite" />
+          {!still && <animate attributeName="opacity" values="1;0.35;1" dur={`${2 + (i % 5) * 0.7}s`} repeatCount="indefinite" />}
         </circle>
       ))}
     </svg>
@@ -410,7 +458,7 @@ export function MemoryInsights() {
     ['Chamadas de ferramenta', m.toolCalls, '#34d399'],
   ]
   return (
-    <Card title="Insights de memória" bodyClassName="grid grid-cols-[1fr_1.1fr] items-center gap-2">
+    <Card id="memoria" title="Insights de memória" bodyClassName="grid grid-cols-[1fr_1.1fr] items-center gap-2">
       <div className="flex h-full min-h-0 items-center">
         <Constellation />
       </div>
@@ -420,7 +468,7 @@ export function MemoryInsights() {
             <div className="font-mono text-[15px] font-semibold tabular-nums" style={{ color, textShadow: `0 0 10px ${color}66` }}>
               {formatInt(value)}
             </div>
-            <div className="truncate text-[9.5px] tracking-wide text-slate-400">{label}</div>
+            <div className="truncate text-[10px] tracking-wide text-slate-400">{label}</div>
           </div>
         ))}
       </div>
@@ -446,9 +494,9 @@ export function LlmStatus() {
       {providers.slice(0, 9).map((p) => {
         const on = p.status === 'connected'
         return (
-          <div key={p.name} className={`tile flex min-h-0 min-w-0 flex-col justify-center px-1.5 py-0 leading-tight ${on ? '' : 'opacity-70'}`}>
+          <div key={p.name} className={`tile flex min-h-0 min-w-0 flex-col justify-center px-1.5 py-0 leading-tight`}>
             <div className="truncate text-[10.5px] font-medium text-cyan-50">{p.name}</div>
-            <div className={`flex items-center gap-1 text-[9px] ${on ? 'text-emerald-300' : 'text-slate-500'}`}>
+            <div className={`flex items-center gap-1 text-[10px] ${on ? 'text-emerald-300' : 'text-slate-400'}`}>
               <Dot tone={on ? 'green' : 'gray'} />
               <span className="truncate">{on ? 'Conectado' : 'Não vinculado'}</span>
             </div>

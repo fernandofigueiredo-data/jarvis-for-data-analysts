@@ -3,56 +3,91 @@ import { CloudSun, FileText, MapPin, SendHorizonal, Wifi, type LucideIcon } from
 import { useEffect, useRef, useState } from 'react'
 import { useJarvis } from '../store'
 import { send } from '../ws'
+import Conversation from './Conversation'
+import { PushToTalk } from './Sidebar'
 import { PHASE_COLOR, Waveform } from './ui'
 
-function InfoChip({ icon: Icon, label, value }: { icon: LucideIcon; label: string; value: string }) {
+function InfoChip({
+  icon: Icon,
+  label,
+  value,
+  className = '',
+}: {
+  icon: LucideIcon
+  label: string
+  value: string
+  className?: string
+}) {
   return (
-    <div className="glass flex min-w-0 items-center gap-2 rounded-lg px-2.5 py-1.5" title={`${label}: ${value}`}>
+    <div className={`glass flex min-w-0 items-center gap-2 rounded-lg px-2.5 py-1.5 ${className}`} title={`${label}: ${value}`}>
       <Icon size={14} className="shrink-0 text-cyan-300" />
       <div className="min-w-0 leading-tight">
-        <div className="text-[8.5px] font-semibold tracking-[0.16em] text-slate-500 uppercase">{label}</div>
-        <div className="truncate text-[11px] text-cyan-50">{value}</div>
+        <div className="text-[10px] font-semibold tracking-[0.16em] text-slate-400 uppercase">{label}</div>
+        {/* quebra em até duas linhas: "Parcialmente nublado" não vira "Parcial…" */}
+        <div className="line-clamp-2 text-[11px] break-words text-cyan-50">{value}</div>
       </div>
     </div>
   )
 }
 
 const SUBTITLE = {
-  idle: 'Estou ouvindo…',
   listening: 'Ouvindo você…',
   thinking: 'Pensando…',
   tooling: 'Executando…',
   speaking: 'Respondendo…',
 } as const
 
+// Em espera, o convite depende do modo de voz (o daemon o descreve em health.voice.detail, ver app.publish_health)
+const IDLE_HINT: Record<string, string> = {
+  Ouvindo: 'Diga “Ei Jarvis” ou clique para digitar',
+  'Segure Option': 'Segure o Option direito ou clique para digitar',
+  Desligada: 'Clique para digitar',
+  Carregando: 'Carregando a voz… clique para digitar',
+}
+
 function TalkPill() {
   const phase = useJarvis((s) => s.phase)
   const level = useJarvis((s) => s.level)
   const transcript = useJarvis((s) => s.transcript)
+  const connected = useJarvis((s) => s.connected)
+  const voice = useJarvis((s) => s.health.voice.detail)
   const [typing, setTyping] = useState(false)
   const [text, setText] = useState('')
   const input = useRef<HTMLInputElement>(null)
+  const opener = useRef<HTMLButtonElement>(null)
+  const refocus = useRef(false) // depois de enviar ou de Esc o foco volta à cápsula; depois de Tab, não
   const color = PHASE_COLOR[phase]
   const last = transcript[transcript.length - 1]
-  const subtitle = phase !== 'idle' && last ? last.text : SUBTITLE[phase]
+  const idle = connected ? (IDLE_HINT[voice] ?? 'Clique para digitar') : 'Modo demonstração · clique para digitar'
+  const subtitle = phase === 'idle' ? idle : last ? last.text : SUBTITLE[phase]
   const live = phase !== 'idle'
 
   useEffect(() => {
     if (typing) input.current?.focus()
+    else if (refocus.current) opener.current?.focus()
+    refocus.current = false
   }, [typing])
+
+  const close = () => {
+    refocus.current = true
+    setText('')
+    setTyping(false)
+  }
 
   const submit = () => {
     const t = text.trim()
-    if (t) send({ type: 'say', text: t })
-    setText('')
-    setTyping(false)
+    if (t) {
+      send({ type: 'say', text: t })
+      useJarvis.getState().setChatOpen(true)
+    }
+    close()
   }
 
   return (
     <motion.div
       onClick={() => !typing && setTyping(true)}
       whileHover={typing ? undefined : { scale: 1.01 }}
-      className="relative flex h-[46px] w-full min-w-0 cursor-text items-center gap-3 rounded-full px-4 lg:w-[360px] lg:shrink-0"
+      className="field-ring relative flex h-[46px] w-full min-w-0 cursor-text items-center gap-3 rounded-full px-4 lg:w-[360px] lg:shrink-0"
       style={{
         background: 'linear-gradient(180deg, rgba(14,40,64,0.85), rgba(8,22,40,0.85))',
         boxShadow: `0 0 0 1px ${color}66, 0 0 28px -6px ${color}aa, inset 0 0 22px -10px ${color}`,
@@ -73,21 +108,29 @@ function TalkPill() {
               value={text}
               onChange={(e) => setText(e.target.value)}
               onBlur={() => !text && setTyping(false)}
-              onKeyDown={(e) => e.key === 'Escape' && (setText(''), setTyping(false))}
+              onKeyDown={(e) => e.key === 'Escape' && close()}
+              aria-label="Comando para o Jarvis"
               placeholder="Digite um comando para o Jarvis…"
-              className="min-w-0 flex-1 bg-transparent text-center text-[12.5px] text-cyan-50 placeholder:text-slate-500 focus:outline-none"
+              className="min-w-0 flex-1 bg-transparent text-center text-[12.5px] text-cyan-50 placeholder:text-slate-400 focus:outline-none"
             />
-            <button type="submit" aria-label="Enviar" className="text-cyan-300 hover:text-cyan-100">
+            <button tabIndex={0} type="submit" aria-label="Enviar" className="text-cyan-300 hover:text-cyan-100">
               <SendHorizonal size={15} />
             </button>
           </form>
         ) : (
-          <>
-            <div className="glow-text text-[11px] font-bold tracking-[0.3em] text-cyan-100">FALE COM O JARVIS</div>
-            <div className="truncate text-[11px]" style={{ color }}>
+          // botão de verdade: o teclado chega aqui com Tab e abre o campo com Enter ou Espaço
+          <button
+            tabIndex={0}
+            ref={opener}
+            type="button"
+            aria-label="Fale com o Jarvis — digitar um comando"
+            className="block w-full min-w-0 cursor-text"
+          >
+            <span className="glow-text block text-[11px] font-bold tracking-[0.3em] text-cyan-100">FALE COM O JARVIS</span>
+            <span className="block truncate text-[11px]" style={{ color }}>
               {subtitle}
-            </div>
-          </>
+            </span>
+          </button>
         )}
       </div>
       <Waveform bars={14} active={live} amp={phase === 'speaking' ? level : 0.7} height={22} color={color} className="hidden shrink-0 sm:flex" />
@@ -99,19 +142,33 @@ export default function Footer() {
   const t = useJarvis((s) => s.telemetry)
   return (
     <footer className="flex shrink-0 flex-col items-stretch gap-2 lg:flex-row lg:items-center">
-      <div className="grid min-w-0 grid-cols-3 gap-2 lg:w-[34%] lg:max-w-[400px] lg:shrink-0">
-        <InfoChip icon={MapPin} label="Local" value={t.location ?? '—'} />
-        <InfoChip icon={CloudSun} label="Clima" value={t.weather ? `${Math.round(t.weather.tempC)}°C · ${t.weather.desc}` : '—'} />
+      {/* celular: local e rede lado a lado, clima na linha de baixo com a largura toda */}
+      <div className="grid min-w-0 grid-cols-2 gap-2 sm:grid-cols-[minmax(0,1fr)_minmax(0,1.4fr)_minmax(0,0.9fr)] lg:w-[36%] lg:max-w-[440px] lg:shrink-0">
+        <InfoChip icon={MapPin} label="Local" value={t.location || '—'} />
+        <InfoChip
+          icon={CloudSun}
+          label="Clima"
+          value={t.weather ? `${Math.round(t.weather.tempC)}°C · ${t.weather.desc}` : '—'}
+          className="order-last col-span-2 sm:order-none sm:col-span-1"
+        />
         <InfoChip icon={Wifi} label="Rede" value={t.network || '—'} />
       </div>
-      <div className="flex min-w-0 flex-1 items-center justify-center gap-3">
+      <div className="relative flex min-w-0 flex-1 items-center justify-center gap-3">
+        <Conversation />
         <span className="hidden flex-1 border-t border-dashed border-cyan-400/25 lg:block" />
+        {/* no celular a barra lateral some: o microfone vem para cá */}
+        <div className="md:hidden">
+          <PushToTalk size={44} compact />
+        </div>
         <TalkPill />
         <span className="hidden flex-1 border-t border-dashed border-cyan-400/25 lg:block" />
       </div>
       <motion.button
         whileTap={{ scale: 0.96 }}
-        onClick={() => send({ type: 'command', id: 'briefing' })}
+        onClick={() => {
+          send({ type: 'command', id: 'briefing' })
+          useJarvis.getState().setChatOpen(true)
+        }}
         className="flex h-[42px] shrink-0 items-center justify-center gap-2 rounded-xl border border-violet-400/40 bg-gradient-to-r from-violet-500/20 to-cyan-500/15 px-3.5 text-[12px] font-semibold whitespace-nowrap text-violet-100 shadow-[0_0_20px_-6px_#a78bfa] transition-colors hover:border-violet-300/70"
       >
         <FileText size={15} />

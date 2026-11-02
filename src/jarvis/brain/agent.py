@@ -6,6 +6,7 @@ from pathlib import Path
 from typing import Any
 
 from claude_agent_sdk import (
+    AssistantMessage,
     ClaudeAgentOptions,
     ClaudeSDKClient,
     PermissionResultAllow,
@@ -30,6 +31,10 @@ def configured_mcp_servers() -> dict[str, Any]:
         return {}
     home = str(Path.home())
     return {**(cfg.get("mcpServers") or {}), **((cfg.get("projects") or {}).get(home, {}).get("mcpServers") or {})}
+
+
+class BrainError(RuntimeError):
+    """O turno terminou em erro sem resposta (modelo, login, limite de uso). A mensagem vem do Claude Code."""
 
 
 async def _can_use_tool(name: str, _input: dict[str, Any], _ctx: ToolPermissionContext):
@@ -89,6 +94,7 @@ class Brain:
             assert self.client
             self.cancelled = False
             answer: list[str] = []
+            error = ""
             await self.client.query(text)
             async for msg in self.client.receive_response():
                 if isinstance(msg, StreamEvent) and msg.parent_tool_use_id is None:
@@ -102,9 +108,15 @@ class Brain:
                         if block.get("type") in ("tool_use", "server_tool_use", "mcp_tool_use"):
                             memory.bump("tool_calls")
                             on_tool(block.get("name", ""))
+                elif isinstance(msg, AssistantMessage) and msg.error and msg.parent_tool_use_id is None:
+                    # Erros da API (modelo, login, limite) não vêm em stream: só nesta mensagem e no result
+                    error = " ".join(getattr(b, "text", "") for b in msg.content).strip() or msg.error
                 elif isinstance(msg, ResultMessage):
                     if msg.is_error and not self.cancelled:
-                        print(f"  erro no turno: {msg.subtype} {msg.errors or ''}")
+                        error = msg.result or error or "; ".join(msg.errors or []) or msg.subtype
+                        print(f"  erro no turno: {msg.subtype} {msg.api_error_status or ''} {error}")
+                        if not answer:
+                            raise BrainError(error)
                     break  # exatamente um result por turno: é a fronteira segura entre perguntas
             return "".join(answer).strip()
 

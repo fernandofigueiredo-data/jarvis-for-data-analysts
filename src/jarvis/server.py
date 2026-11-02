@@ -22,8 +22,10 @@ const ws=new WebSocket(`ws://${location.host}/ws`);ws.onmessage=e=>{const m=JSON
 if(m.type!=='telemetry')log.textContent=JSON.stringify(m).slice(0,300)+'\\n'+log.textContent.slice(0,5000)}
 </script>"""
 
+# o próprio daemon, o `npm run dev` (5173) e o `npm run preview` (4173)
 ALLOWED_ORIGINS = {f"http://{config.HOST}:{config.PORT}", f"http://localhost:{config.PORT}",
-                   "http://localhost:5173", "http://127.0.0.1:5173", None}
+                   "http://localhost:5173", "http://127.0.0.1:5173", "http://localhost:4173", "http://127.0.0.1:4173",
+                   None}
 
 
 def create_app(jarvis: "Jarvis") -> FastAPI:
@@ -59,8 +61,12 @@ def create_app(jarvis: "Jarvis") -> FastAPI:
         sender = asyncio.create_task(pump())
         try:
             while True:
-                msg = json.loads(await socket.receive_text())
-                await jarvis.on_client(msg)
+                try:
+                    msg = json.loads(await socket.receive_text())
+                except ValueError:
+                    continue  # mensagem malformada não derruba a conexão do painel
+                if isinstance(msg, dict):
+                    await jarvis.on_client(msg)
         except (WebSocketDisconnect, RuntimeError):
             pass
         finally:

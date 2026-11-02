@@ -13,7 +13,10 @@ import type {
 } from './types'
 
 const FEED_MAX = 30
-const TRANSCRIPT_MAX = 20
+const TRANSCRIPT_MAX = 40
+
+/** Destinos da navegação lateral: 'top' é o Command Center inteiro; os outros são ids de cartões. */
+export type Section = 'top' | 'ai-core' | 'agentes' | 'calendario' | 'memoria' | 'conversa' | 'noticias'
 
 export interface JarvisState {
   connected: boolean
@@ -21,28 +24,38 @@ export interface JarvisState {
   level: number
   pttDown: boolean
   transcript: TranscriptLine[]
+  history: TranscriptLine[] // conversas anteriores, do SQLite do daemon
   feed: FeedItem[]
   health: Health
   telemetry: Telemetry
   agents: Agent[]
   timeline: TimelineEvent[]
+  timelineReady: boolean // a 1ª leitura do Calendário já chegou (vazia ou não)
   memory: MemoryStats
   llms: Provider[]
   focusMode: boolean
+  chatOpen: boolean
+  section: Section
+  alertsSeen: number // ms do último clique no sino
   apply: (msg: ServerMessage) => void
+  reset: () => void
   setConnected: (v: boolean) => void
   setPtt: (v: boolean) => void
+  setHistory: (h: TranscriptLine[]) => void
+  setChatOpen: (v: boolean) => void
+  setSection: (s: Section) => void
+  markAlertsSeen: () => void
   toggleFocus: () => void
 }
 
 const off = (detail: string) => ({ status: 'off' as const, detail })
 
-export const useJarvis = create<JarvisState>((set) => ({
-  connected: false,
-  phase: 'idle',
+// Estado sem dados: o de partida e o que fica ao conectar, para nada da demonstração passar por dado real
+const blank = () => ({
+  phase: 'idle' as Phase,
   level: 0,
-  pttDown: false,
   transcript: [],
+  history: [],
   feed: [],
   health: {
     core: off('—'),
@@ -55,12 +68,27 @@ export const useJarvis = create<JarvisState>((set) => ({
   telemetry: { cpu: 0, ram: 0, disk: 0, network: '—' },
   agents: [],
   timeline: [],
+  timelineReady: false,
   memory: { memories: 0, sessionTurns: 0, toolCalls: 0 },
   llms: [],
-  focusMode: false,
+})
 
+export const useJarvis = create<JarvisState>((set) => ({
+  connected: false,
+  pttDown: false,
+  focusMode: false,
+  chatOpen: false,
+  section: 'top',
+  alertsSeen: 0,
+  ...blank(),
+
+  reset: () => set(blank()),
   setConnected: (connected) => set({ connected }),
   setPtt: (pttDown) => set({ pttDown }),
+  setHistory: (history) => set({ history }),
+  setChatOpen: (chatOpen) => set({ chatOpen }),
+  setSection: (section) => set({ section }),
+  markAlertsSeen: () => set({ alertsSeen: Date.now() }),
   toggleFocus: () => set((s) => ({ focusMode: !s.focusMode })),
 
   apply: (msg) =>
@@ -73,7 +101,10 @@ export const useJarvis = create<JarvisState>((set) => ({
           const last = s.transcript[s.transcript.length - 1]
           // parcial do mesmo papel substitui a linha anterior em vez de empilhar
           const base = last && !last.final && last.role === msg.role ? s.transcript.slice(0, -1) : s.transcript
-          return { transcript: [...base, line].slice(-TRANSCRIPT_MAX) }
+          // uma pergunta nova (de verdade, não da demonstração) abre a conversa; os pedaços da resposta não a
+          // reabrem, para dar para fechá-la enquanto ele fala
+          const opens = s.connected && msg.role === 'user'
+          return { transcript: [...base, line].slice(-TRANSCRIPT_MAX), chatOpen: s.chatOpen || opens }
         }
         case 'feed':
           return { feed: [msg.item, ...s.feed.filter((f) => f.id !== msg.item.id)].slice(0, FEED_MAX) }
@@ -86,7 +117,7 @@ export const useJarvis = create<JarvisState>((set) => ({
         case 'agents':
           return { agents: msg.agents }
         case 'timeline':
-          return { timeline: msg.events }
+          return { timeline: msg.events, timelineReady: true }
         case 'memory':
           return { memory: { memories: msg.memories, sessionTurns: msg.sessionTurns, toolCalls: msg.toolCalls } }
         case 'llms':
@@ -98,7 +129,7 @@ export const useJarvis = create<JarvisState>((set) => ({
           if (msg.health) out.health = { ...s.health, ...msg.health.components }
           if (msg.telemetry) out.telemetry = { ...s.telemetry, ...msg.telemetry }
           if (msg.agents) out.agents = msg.agents.agents
-          if (msg.timeline) out.timeline = msg.timeline.events
+          if (msg.timeline) Object.assign(out, { timeline: msg.timeline.events, timelineReady: true })
           if (msg.memory) out.memory = msg.memory
           if (msg.llms) out.llms = msg.llms.providers
           return out
