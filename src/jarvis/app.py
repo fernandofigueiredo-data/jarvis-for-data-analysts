@@ -166,7 +166,7 @@ class Jarvis:
                     for alerta in await asyncio.to_thread(kpis.conferir_todos):
                         print(f"  alerta de KPI: {alerta['texto']}")
                         bus.feed_item(f"Alerta: {alerta['nome']}", "warn", alerta["texto"][:160])
-                        self.speaker.say(f"Senhor, {alerta['texto']}.")
+                        self.speaker.say(fillers.trat("Senhor, ") + f"{alerta['texto']}.")
                 except Exception as exc:
                     print(f"  monitor de KPIs falhou: {exc}")
                 painel_kpis()
@@ -222,7 +222,7 @@ class Jarvis:
             answer = await sessao.ask(text, on_tool)
         except Exception as exc:
             print(f"  [profundo] falhou: {exc}")
-            answer = "Infelizmente a análise profunda não respondeu, senhor."
+            answer = fillers.trat("Infelizmente a análise profunda não respondeu, senhor.")
             bus.feed_item("A análise profunda não respondeu", "warn", str(exc)[:160])
         self.speaker.say(profundo.falado(answer))
         memory.add_turn("assistant", answer)
@@ -303,7 +303,7 @@ class Jarvis:
             self.brain_ready = True
         except Exception as exc:
             print(f"  cérebro falhou: {exc}")
-            answer = "Infelizmente o cérebro não respondeu, senhor."
+            answer = fillers.trat("Infelizmente o cérebro não respondeu, senhor.")
             self.speaker.say(answer)
             self.brain_ready = False
             bus.feed_item("O Claude não respondeu", "warn", str(exc)[:160])
@@ -471,7 +471,7 @@ class Jarvis:
     # ------------------------------------------------------------------ timers
     def timer_done(self, t: Timer) -> None:
         subprocess.run(["afplay", ALARM])
-        line = f"Senhor, lembrete: {t.label}." if t.label else "O tempo acabou, senhor."
+        line = fillers.trat(f"Senhor, lembrete: {t.label}." if t.label else "O tempo acabou, senhor.")
         bus.feed_item(t.label or "Timer finalizado", "warn", "Timer")
         self.speaker.say(line)
 

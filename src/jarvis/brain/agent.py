@@ -19,7 +19,7 @@ from claude_agent_sdk import (
 from jarvis import config
 from jarvis.brain import tools
 from jarvis.brain.gate import DENY_MESSAGE, WRITE_BUILTINS, decide_tool
-from jarvis.brain.persona import system_prompt
+from jarvis.brain.persona import pronome, system_prompt
 from jarvis.memory import memory
 
 DATA_EXTENSIONS = (".csv", ".tsv", ".xlsx", ".xls", ".parquet")
@@ -55,10 +55,11 @@ class Brain:
     def options(self) -> ClaudeAgentOptions:
         facts = memory.memories(30)
         prompt = system_prompt()
+        ele, dele = pronome()
         if facts:
-            prompt += "\n\nO que você já sabe sobre ele:\n" + "\n".join(f"- {f}" for f in facts)
+            prompt += f"\n\nO que você já sabe sobre {ele}:\n" + "\n".join(f"- {f}" for f in facts)
         if termos := memory.glossario(40):
-            prompt += "\n\nGlossário de dados dele:\n" + "\n".join(f"- {t}: {d}" for t, d in termos)
+            prompt += f"\n\nGlossário de dados {dele}:\n" + "\n".join(f"- {t}: {d}" for t, d in termos)
         return ClaudeAgentOptions(
             system_prompt=prompt,  # prompt próprio, não o preset de agente de código
             mcp_servers={**self.external_servers, **tools.servers()},

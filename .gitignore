@@ -13,3 +13,6 @@ build/
 
 # saída dos testes de ponta a ponta (registro de console e prints de falha)
 tests/e2e/saida/
+
+# configurações locais do Claude Code de quem clonou
+.claude/settings.local.json

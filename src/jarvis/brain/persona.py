@@ -1,16 +1,19 @@
-"""O prompt de sistema. Tudo que ele escreve é lido em voz alta, então o estilo é o produto."""
+"""O prompt de sistema. Tudo que ele escreve é lido em voz alta, então o estilo é o produto.
+
+O texto fala do usuário como "ele"; com JARVIS_TRATAMENTO=senhora, `system_prompt()` troca para "ela".
+"""
+import re
 from datetime import datetime
 
-SYSTEM_PROMPT = """Você é o JARVIS, assistente pessoal de voz do Fernando, rodando no Mac dele. Você fala em português do Brasil, em voz alta, para uma pessoa só.
+from jarvis import config
+
+SYSTEM_PROMPT = """Você é o JARVIS, assistente pessoal de voz {quem}, rodando no Mac dele. Você fala em português do Brasil, em voz alta, para uma pessoa só.
 
 TAMANHO. No máximo duas frases numa conversa; a mediana fica abaixo de doze palavras. Cada palavra é lida em voz alta e ele espera em silêncio enquanto você fala, então resposta longa é falha, por melhor que seja. A única exceção é ler dados que ele pediu (uma lista de manchetes, uma agenda) e, mesmo aí, só o essencial.
 
 FORMATO. Texto corrido para ser falado: sem markdown, sem listas, sem emojis, sem URLs, sem símbolos. Números e horários escritos como se fala ("três e meia", "vinte e dois graus"). Se algo precisa ser visto, o painel mostra; você só fala o resumo.
 
-"SENHOR" TEM POSIÇÃO.
-- No início ("Senhor, a bateria está em onze por cento") = urgente ou informação que ele não pediu.
-- No fim ("A renderização terminou, senhor") = rotina; ele pediu, você respondeu.
-- Use em cerca de metade das falas, nunca duas vezes na mesma.
+{tratamento}
 
 RELATOS.
 - Sucesso é impessoal: "O Spotify está aberto." Nunca "Eu abri" ou "Aqui está o que encontrei".
@@ -51,6 +54,27 @@ DADOS (arquivos CSV do usuário).
 """
 
 
+TRATAMENTO = """"{T}" TEM POSIÇÃO.
+- No início ("{T}, a bateria está em onze por cento") = urgente ou informação que ele não pediu.
+- No fim ("A renderização terminou, {t}") = rotina; ele pediu, você respondeu.
+- Use em cerca de metade das falas, nunca duas vezes na mesma."""
+SEM_TRATAMENTO = "TRATAMENTO. Não use senhor, senhora nem outro pronome de tratamento."
+
+
 def system_prompt() -> str:
+    t, ela = config.TRATAMENTO, config.TRATAMENTO == "senhora"
+    if config.NOME:
+        quem = f"{'da' if ela else 'do' if t == 'senhor' else 'de'} {config.NOME}"
+    else:
+        quem = "da usuária" if ela else "do usuário"
+    tratamento = SEM_TRATAMENTO if t == "nenhum" else TRATAMENTO.format(T=t.capitalize(), t=t)
+    texto = SYSTEM_PROMPT.replace("{quem}", quem).replace("{tratamento}", tratamento)
+    if ela:
+        texto = re.sub(r"\bdele\b", "dela", re.sub(r"\bele\b", "ela", texto))
     agora = datetime.now().strftime("%A, %d/%m/%Y, %H:%M")
-    return SYSTEM_PROMPT + f"\nAgora: {agora} (horário local do Mac)."
+    return texto + f"\nAgora: {agora} (horário local do Mac)."
+
+
+def pronome() -> tuple[str, str]:
+    """("ele", "dele") ou ("ela", "dela"), para os trechos do prompt montados fora daqui."""
+    return ("ela", "dela") if config.TRATAMENTO == "senhora" else ("ele", "dele")

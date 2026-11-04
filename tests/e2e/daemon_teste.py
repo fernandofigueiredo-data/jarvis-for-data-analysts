@@ -141,6 +141,7 @@ def main() -> None:
         "JARVIS_PORT": str(a.port), "JARVIS_DATA_DIR": str(base / "data"), "JARVIS_CACHE_DIR": str(base / "cache"),
         "JARVIS_PASTAS_DADOS": str(base / "pastas"), "JARVIS_UPLOAD_MAX_MB": "1", "JARVIS_RESUMO_HORA": "",
         "JARVIS_ABRIR_NOTEBOOK": "0", "JARVIS_LOCATION": "", "JARVIS_TESTE_FALA": str(base / "fala.log"),
+        "JARVIS_NOME": "", "JARVIS_TRATAMENTO": "senhor",  # as falas esperadas nos testes usam "senhor"
         "PATH": f"{base / 'bin'}{os.pathsep}{os.environ.get('PATH', '')}", "PYTHONUNBUFFERED": "1",
     })
     sys.path.insert(0, str(AQUI))

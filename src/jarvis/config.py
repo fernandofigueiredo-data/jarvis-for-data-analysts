@@ -12,6 +12,12 @@ CACHE_DIR = Path(os.getenv("JARVIS_CACHE_DIR", ROOT / "cache"))
 LOG_FILE = Path.home() / "Library/Logs/Jarvis.log"
 UI_DIST = ROOT / "ui" / "dist"
 
+# Quem usa: nome (opcional) e como o Jarvis trata a pessoa na fala ("senhor", "senhora" ou "nenhum")
+NOME = os.getenv("JARVIS_NOME", "").strip()
+TRATAMENTO = os.getenv("JARVIS_TRATAMENTO", "senhor").strip().lower()
+if TRATAMENTO not in ("senhor", "senhora", "nenhum"):
+    TRATAMENTO = "senhor"
+
 MODEL = os.getenv("JARVIS_MODEL", "claude-sonnet-5-5")
 EFFORT = os.getenv("JARVIS_EFFORT", "low")
 MAX_TURNS = int(os.getenv("JARVIS_MAX_TURNS", "24"))
