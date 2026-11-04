@@ -35,7 +35,7 @@ NUMERO = re.compile(r"^-?\d+([.,]\d+)?%?$")
 PERFIL = """(version 1)
 (deny default)
 (import "system.sb")
-(allow process-exec (literal "{exe}") (literal "{exe_real}"))
+(allow process-exec (literal "{exe}") (literal "{exe_real}") (literal "{app}"))
 (allow file-read*
   (subpath "/System") (subpath "/usr/lib") (subpath "/usr/share") (subpath "/private/var/db/dyld")
   (literal "/") (literal "/dev/null") (literal "/dev/urandom") (literal "/dev/random")
@@ -178,8 +178,10 @@ def _tabela(linhas: list[dict], rotulos: set[str], lim: Limites):
 
 
 def _perfil(work: Path, parquet: Path) -> str:
-    exe = Path(sys.executable)
-    return PERFIL.format(exe=exe, exe_real=exe.resolve(), base=Path(sys.base_prefix).resolve(),
+    exe, base = Path(sys.executable), Path(sys.base_prefix).resolve()
+    # O Python do python.org (framework) relança a si mesmo por este executável; sem ele, nada roda no sandbox
+    app = base / "Resources/Python.app/Contents/MacOS/Python"
+    return PERFIL.format(exe=exe, exe_real=exe.resolve(), app=app, base=base,
                          venv=Path(sys.prefix).resolve(), dados=parquet.parent.resolve(), mpl=_mpl().resolve(),
                          work=work.resolve())
 
