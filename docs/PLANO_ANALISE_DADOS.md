@@ -1,12 +1,12 @@
 # Plano: o Jarvis como braço direito do analista de dados
 
-Data: 2 de novembro de 2026 · Escopo: pesquisa, provas de conceito e plano. Nada do sistema existente foi alterado. · Provas de conceito: [`_pocs/`](_pocs/) (descartáveis, só dados sintéticos)
+Data: 2 de novembro de 2026 · Escopo: pesquisa, provas de conceito e plano. Nada do sistema existente foi alterado. · Provas de conceito: [`_pocs/`](../_pocs/) (descartáveis, só dados sintéticos)
 
 Marcadores usados quando a diferença importa: **[fato]** verificado por teste meu ou fonte oficial; **[fonte secundária]** afirmado por blog ou agregador, não confirmado na fonte oficial; **[inferência]** conclusão minha a partir de fatos; **[hipótese]** plausível, não testado; **[opinião]** julgamento meu. "Não verificado" quando não há teste nem fonte.
 
 ## 1. Estado atual do Jarvis
 
-O Jarvis é um assistente de voz para o Mac, em Python 3.13: microfone com VAD, transcrição local com faster-whisper `small` em português, palavra de ativação "Ei Jarvis" ou Option direito, rota rápida por regex para comandos do Mac (AppleScript) e, para o resto, uma sessão viva do Claude pelo `claude-agent-sdk` 0.2.176 com o login da assinatura (`ClaudeSDKClient`, `setting_sources=[]`, `cwd` na pasta pessoal). A fala sai pela voz Luciana do macOS ou pela ElevenLabs, frase a frase. Um painel React/Three.js conversa com o daemon por FastAPI e WebSocket em 127.0.0.1:8787; a memória é um SQLite (`turns`, `memories`, `news`). Os pontos de extensão são as ferramentas in-process em [`src/jarvis/brain/tools.py`](src/jarvis/brain/tools.py) (`@tool` + `create_sdk_mcp_server`), a política de ferramentas em [`gate.py`](src/jarvis/brain/gate.py), a persona em [`persona.py`](src/jarvis/brain/persona.py), os botões `QUICK` em [`app.py`](src/jarvis/app.py) e os eventos `bus.emit` consumidos por [`ui/src/types.ts`](ui/src/types.ts). Já existe uma função de notícias ([`news.py`](src/jarvis/news.py) + [`sources.json`](sources.json): Educadados e Data Hackers por raspagem de HTML a cada 20 min, ferramentas `news_latest` e `news_article`, botão "Briefing executivo"). Não existe envio de arquivo (nem endpoint nem interface) nem nada de análise de dados. O [`RELATORIO_TESTES.md`](RELATORIO_TESTES.md) de 1º/11 registra 76 itens de interface passando e 57 testes unitários, e deixa um alerta relevante aqui: `Read`, `Glob` e `Grep` estão liberados com `cwd` na pasta pessoal.
+O Jarvis é um assistente de voz para o Mac, em Python 3.13: microfone com VAD, transcrição local com faster-whisper `small` em português, palavra de ativação "Ei Jarvis" ou Option direito, rota rápida por regex para comandos do Mac (AppleScript) e, para o resto, uma sessão viva do Claude pelo `claude-agent-sdk` 0.2.176 com o login da assinatura (`ClaudeSDKClient`, `setting_sources=[]`, `cwd` na pasta pessoal). A fala sai pela voz Luciana do macOS ou pela ElevenLabs, frase a frase. Um painel React/Three.js conversa com o daemon por FastAPI e WebSocket em 127.0.0.1:8787; a memória é um SQLite (`turns`, `memories`, `news`). Os pontos de extensão são as ferramentas in-process em [`src/jarvis/brain/tools.py`](../src/jarvis/brain/tools.py) (`@tool` + `create_sdk_mcp_server`), a política de ferramentas em [`gate.py`](../src/jarvis/brain/gate.py), a persona em [`persona.py`](../src/jarvis/brain/persona.py), os botões `QUICK` em [`app.py`](../src/jarvis/app.py) e os eventos `bus.emit` consumidos por [`ui/src/types.ts`](../ui/src/types.ts). Já existe uma função de notícias ([`news.py`](../src/jarvis/news.py) + [`sources.json`](../sources.json): Educadados e Data Hackers por raspagem de HTML a cada 20 min, ferramentas `news_latest` e `news_article`, botão "Briefing executivo"). Não existe envio de arquivo (nem endpoint nem interface) nem nada de análise de dados. O [`RELATORIO_TESTES.md`](RELATORIO_TESTES.md) de 1º/11 registra 76 itens de interface passando e 57 testes unitários, e deixa um alerta relevante aqui: `Read`, `Glob` e `Grep` estão liberados com `cwd` na pasta pessoal.
 
 ## 2. Vereditos das perguntas 1, 2 e 3
 
@@ -20,7 +20,7 @@ O Jarvis é um assistente de voz para o Mac, em Python 3.13: microfone com VAD, 
 
 **O que já existe e como avalio.** O `news.py` funciona (o relatório de testes mediu o resumo de notícias em 3 s) e acerta em guardar só título e link, e em resumir sob demanda. As limitações [fato, leitura do código]: só duas fontes, ambas brasileiras e por raspagem de HTML, que quebra quando o site muda o layout; nenhuma deduplicação entre fontes; nenhuma seleção por relevância; não há um resumo diário num horário, só a coleta a cada 20 min; e `news_article` baixa até 6.000 caracteres do artigo para o modelo resumir, sem regra explícita contra reproduzir trechos.
 
-**Testes feitos (P1, [`_pocs/p1_noticias/`](_pocs/p1_noticias/)).** Busquei 9 fontes reais em 02/11/2026:
+**Testes feitos (P1, [`_pocs/p1_noticias/`](../_pocs/p1_noticias/)).** Busquei 9 fontes reais em 02/11/2026:
 
 | Fonte | Funciona | Itens | Mais recente | Observação |
 |---|---|---|---|---|
@@ -48,7 +48,7 @@ Coleta das 9 fontes: 147 itens em ~2 s; a deduplicação por URL e pelas 8 prime
 
 **Princípio.** O modelo nunca lê o arquivo nem faz conta. Ele decide a consulta; o número sai de código executado fora do modelo; um validador confere cada número da resposta antes de ela ser falada.
 
-**Leitura do arquivo (P2, [`_pocs/p2_csv/`](_pocs/p2_csv/)).** Gerei um CSV de 5.000 vendas sintéticas em quatro formatos: UTF-8 com vírgula; o "Excel brasileiro" (cp1252, `;`, vírgula decimal, `R$ 1.234,56`, datas dd/mm/aaaa); um sujo (nulos, duplicatas, "n/d", "dez", linha "TOTAL", grafias variantes); e versões de 1 e 5 milhões de linhas.
+**Leitura do arquivo (P2, [`_pocs/p2_csv/`](../_pocs/p2_csv/)).** Gerei um CSV de 5.000 vendas sintéticas em quatro formatos: UTF-8 com vírgula; o "Excel brasileiro" (cp1252, `;`, vírgula decimal, `R$ 1.234,56`, datas dd/mm/aaaa); um sujo (nulos, duplicatas, "n/d", "dez", linha "TOTAL", grafias variantes); e versões de 1 e 5 milhões de linhas.
 
 - DuckDB 2.0 sozinho detecta `;` e `dd/mm/aaaa`, mas **falha na codificação** (erro na linha 2 do cp1252) e **não converte vírgula decimal nem `R$`** (ficam texto). pandas com os padrões dá `UnicodeDecodeError` **[fato]**.
 - O detector genérico de codificação (`charset-normalizer` 3.5.2) **errou**: chamou o cp1252 de `iso8859_10` e, num arquivo com travessão, aspas curvas e €, de `cp1250`, o que transformou "Promoção" em "Promoçăo" **[fato]**. A regra usada no carregador (UTF-8 estrito, senão cp1252, senão detector) acertou todos os casos.
@@ -57,7 +57,7 @@ Coleta das 9 fontes: 147 itens em ~2 s; a deduplicação por URL e pelas 8 prime
 
 **Tamanho.** Ler e perfilar 1M de linhas (61 MB) levou 0,67 s com pico de 356 MB; 5M (309 MB) levou 2,46 s com pico de 1,39 GB (pandas: 2,83 s e 1,03 GB). Transcodificar 309 MB levou 0,37 s **[fato, Mac M2 de 17 GB]**. **[inferência]** Arquivos de até ~1 GB cabem; acima disso, o DuckDB deve trabalhar sobre um banco temporário em disco com `memory_limit`, e o limite prático passa a ser o disco.
 
-**Números rastreáveis (P3, [`_pocs/p3_numeros/`](_pocs/p3_numeros/)).** Dei ao Claude (`claude-sonnet-5-5`, esforço baixo, login da assinatura) só duas ferramentas: `perfil_arquivo` e `consultar_sql` (aceita uma única instrução `SELECT`, checada pelo parser do DuckDB). Nenhuma ferramenta nativa. Cinco perguntas:
+**Números rastreáveis (P3, [`_pocs/p3_numeros/`](../_pocs/p3_numeros/)).** Dei ao Claude (`claude-sonnet-5-5`, esforço baixo, login da assinatura) só duas ferramentas: `perfil_arquivo` e `consultar_sql` (aceita uma única instrução `SELECT`, checada pelo parser do DuckDB). Nenhuma ferramenta nativa. Cinco perguntas:
 
 | Pergunta | O que aconteceu |
 |---|---|
@@ -69,7 +69,7 @@ Coleta das 9 fontes: 147 itens em ~2 s; a deduplicação por URL e pelas 8 prime
 
 O validador extrai números em formato brasileiro (1.234,56; 12,5%; 1,99 milhão) e aceita só o arredondamento que a própria escrita indica ("1,99 milhão" vale ±5 mil; "1.975.000" para 1.985.706 é recusado). Na primeira rodada ele acusou 4 falsos positivos (data "31/12" contra "2025-12-31", "1,55% abaixo" contra "-1,55", e dois números citados de turnos anteriores); depois de corrigido, os 32 números das 5 respostas têm origem num resultado de ferramenta **[fato]**. Limite do validador **[inferência]**: ele pega número inventado, mas não número verdadeiro atribuído à coisa errada (o "10" de "10 UFs" casaria com qualquer 10 do resultado). Latência: 3 a 9 s por pergunta, 31 s na primeira (início da sessão) **[fato]**.
 
-**Isolamento da execução (P4, [`_pocs/p4_isolamento/RESUMO.md`](_pocs/p4_isolamento/RESUMO.md)).** O mesmo script hostil (ler arquivo-canário fora da pasta, listar a pasta pessoal, escrever fora, rede, shell, laço infinito, 2 GB de memória) em quatro ambientes:
+**Isolamento da execução (P4, [`_pocs/p4_isolamento/RESUMO.md`](../_pocs/p4_isolamento/RESUMO.md)).** O mesmo script hostil (ler arquivo-canário fora da pasta, listar a pasta pessoal, escrever fora, rede, shell, laço infinito, 2 GB de memória) em quatro ambientes:
 
 | | Sem isolamento (= kernel Jupyter) | DuckDB travado | Seatbelt `deny default` | Docker (Colima) |
 |---|---|---|---|---|
@@ -81,7 +81,7 @@ O validador extrai números em formato brasileiro (1.234,56; 12,5%; 1,99 milhão
 
 "DuckDB travado" é `enable_external_access=false` + `lock_configuration=true` depois de carregar a tabela: `read_csv` de outro arquivo, `read_text`, `COPY`, `ATTACH`, `INSTALL`, URL `https://`, `/dev/stdin` e a tentativa de destravar foram todos recusados **[fato]**. **[inferência]** Para o MVP, SQL nesse modo dá isolamento suficiente sem contêiner. Python livre (gráficos com matplotlib, testes estatísticos, modelos) exige Docker ou Seatbelt com um vigia de memória; o sandbox do Claude Code não serve aqui, porque cobre só comandos de shell, não servidores MCP nem hooks **[fato, doc oficial "Sandboxing"]**.
 
-**Só agregados para o Claude (P7, [`_pocs/p7_agregados/`](_pocs/p7_agregados/); decisão do usuário em 02/11/2026).** O SQL livre da P3 devolve linhas cruas (até 50), o que não serve para essa decisão. Instrução no prompt também não basta, porque o modelo pode errar ou ser induzido pelo conteúdo do arquivo. A trava fica na ferramenta: o Claude não escreve a consulta final, pede `{métricas, agrupar por, filtros, ordenar}` e a ferramenta monta o SQL a partir de uma lista fechada de funções (soma, média, mediana, contagem, distintos, desvio, mínimo e máximo só de número e data, percentis). Ela acrescenta `count(*)` e **suprime todo grupo com menos de K = 5 linhas**. Testei num CSV sintético com CPF, nome e e-mail falsos **[fato]**:
+**Só agregados para o Claude (P7, [`_pocs/p7_agregados/`](../_pocs/p7_agregados/); decisão do usuário em 02/11/2026).** O SQL livre da P3 devolve linhas cruas (até 50), o que não serve para essa decisão. Instrução no prompt também não basta, porque o modelo pode errar ou ser induzido pelo conteúdo do arquivo. A trava fica na ferramenta: o Claude não escreve a consulta final, pede `{métricas, agrupar por, filtros, ordenar}` e a ferramenta monta o SQL a partir de uma lista fechada de funções (soma, média, mediana, contagem, distintos, desvio, mínimo e máximo só de número e data, percentis). Ela acrescenta `count(*)` e **suprime todo grupo com menos de K = 5 linhas**. Testei num CSV sintético com CPF, nome e e-mail falsos **[fato]**:
 
 | Tentativa | Resultado |
 |---|---|
@@ -123,7 +123,7 @@ O custo dessa decisão **[inferência]**: o Claude deixa de fazer junções, col
 
 ## 3. Voz para comandos de dados
 
-**Teste feito (P6, [`_pocs/p6_voz/`](_pocs/p6_voz/)).** Gerei 16 comandos de dados com nomes de colunas, siglas e números ("média de ticket_medio por UF", "NPS", "CNPJ", "p-valor", "R$ 1.234,56", "CAC e LTV", "churn"), falados pelas vozes Luciana e Eddy do macOS (32 áudios), e medi quantos termos-chave o faster-whisper acertou. Ressalva: voz sintética não é voz humana; os números servem para comparar configurações, não como acurácia absoluta.
+**Teste feito (P6, [`_pocs/p6_voz/`](../_pocs/p6_voz/)).** Gerei 16 comandos de dados com nomes de colunas, siglas e números ("média de ticket_medio por UF", "NPS", "CNPJ", "p-valor", "R$ 1.234,56", "CAC e LTV", "churn"), falados pelas vozes Luciana e Eddy do macOS (32 áudios), e medi quantos termos-chave o faster-whisper acertou. Ressalva: voz sintética não é voz humana; os números servem para comparar configurações, não como acurácia absoluta.
 
 | Modelo | Configuração | Acerto de termos | Latência mediana / máx. |
 |---|---|---|---|
@@ -232,7 +232,7 @@ Decisões de desenho:
 - Achado durante a construção: o `Read` do Claude Code, liberado com `cwd` na pasta pessoal, leria o CSV cru por fora da trava de agregados, e o CLI libera o `Read` sem consultar o `can_use_tool`. Corrigido com uma regra de permissão em `ClaudeAgentOptions.settings` que nega `Read` a `.csv`, `.tsv`, `.xlsx`, `.xls` e `.parquet` (o `Grep` respeita a mesma regra). Testado com prompt neutro: `Read` e `Grep` no arquivo foram recusados; `Grep` na pasta inteira voltou sem resultados; outros arquivos continuam legíveis. Com `--writes`, o `Bash` volta a existir e poderia ler o arquivo com `cat`: risco aceito do modo escrita.
 - `.txt` saiu das extensões abertas, para coincidir com as que o `Read` nega.
 - A conferência dos números roda ao fim do turno (aviso no feed), não antes de falar; a versão antes da fala fica para a fase 2.
-- Testes: 13 novos em [`tests/test_dados.py`](tests/test_dados.py) (70 no total, todos passando). Ponta a ponta com `jarvis --text` em CSVs sintéticos: faturamento por UF com projeção de 12,5% (R$ 1.985.706,79 pela calculadora), problemas do arquivo sujo, e recusa do "CPF de quem mais gastou". O primeiro teste do arquivo sujo acusou "9" colunas sem origem; o total de colunas passou a vir pronto no perfil e o aviso sumiu.
+- Testes: 13 novos em [`tests/test_dados.py`](../tests/test_dados.py) (70 no total, todos passando). Ponta a ponta com `jarvis --text` em CSVs sintéticos: faturamento por UF com projeção de 12,5% (R$ 1.985.706,79 pela calculadora), problemas do arquivo sujo, e recusa do "CPF de quem mais gastou". O primeiro teste do arquivo sujo acusou "9" colunas sem origem; o total de colunas passou a vir pronto no perfil e o aviso sumiu.
 
 **Fase 2 — painel e voz para dados.** Cartão "Dados" no painel (tabela, SQL, gráfico declarativo: ideia 3), arrastar o arquivo para o painel, glossário pessoal no Whisper e no prompt (ideia 1), validação antes de falar.
 
@@ -326,4 +326,4 @@ Data de acesso de todas: 02/11/2026.
 | Python TTS com Kokoro (thomazrb) | https://thomazrb.github.io/posts/python-tts-kokoro |
 | Feeds testados na P1 | https://www.kdnuggets.com/feed · https://towardsdatascience.com/feed · https://www.databricks.com/feed · https://duckdb.org/feed.xml · https://www.getdbt.com/blog/rss.xml · https://benn.substack.com/feed · https://news.google.com/rss/search · https://hn.algolia.com/api/v1/search_by_date |
 
-Provas de conceito e saídas: [`_pocs/`](_pocs/) (`p1_noticias/fontes_resultado.json` e `digest.json`, `p2_csv/RESUMO.md` e `bench.jsonl`, `p3_numeros/resultado.json` e `revalidacao.txt`, `p4_isolamento/RESUMO.md`, `p5_plugin/resultado.json`, `p5_gate.txt`, `p6_voz/resultado_*.json` e `intencao.txt`, `p7_agregados/resultado.json` e `saida.txt`).
+Provas de conceito e saídas: [`_pocs/`](../_pocs/) (`p1_noticias/fontes_resultado.json` e `digest.json`, `p2_csv/RESUMO.md` e `bench.jsonl`, `p3_numeros/resultado.json` e `revalidacao.txt`, `p4_isolamento/RESUMO.md`, `p5_plugin/resultado.json`, `p5_gate.txt`, `p6_voz/resultado_*.json` e `intencao.txt`, `p7_agregados/resultado.json` e `saida.txt`).

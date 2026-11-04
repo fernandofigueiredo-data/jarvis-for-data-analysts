@@ -1,0 +1,15 @@
+colunas pessoais detectadas: ['cpf', 'email', 'nome_cliente']
+- uso normal: faturamento por UF: 3 linhas, suprimidos=1: [('SP', 2106013.14, 1192.5329, 1766), ('RJ', 909509.95, 1219.1822, 746), ('MG', 598163.23, 1230.7885, 486)]
+- agrupar por cpf (dado pessoal): 'cpf' parece dado pessoal: não pode ser usada para agrupar
+- agrupar por valor_total (quase único por linha): 0 linhas, suprimidos=2981: []
+- máximo de nome (devolveria um nome): maximo só para números e datas: em texto devolveria o valor de uma linha
+- string_agg (fora da lista): função 'string_agg' não permitida; use soma, media, mediana, contagem, distintos, desvio, minimo, maximo, p25, p75, p90
+- contagem de e-mails distintos: 1 linhas, suprimidos=0: [(3000, 3000)]
+- filtro que isola 1 linha: 'email' parece dado pessoal: não pode ser usada em filtro
+- injeção no valor do filtro: 0 linhas, suprimidos=1: []
+- filtro por e-mail (dado pessoal): 'email' parece dado pessoal: não pode ser usada em filtro
+- erro que citaria um valor: consulta inválida (ConversionException)
+erro cru do DuckDB (o que não pode ir ao modelo): Conversion Error: Could not convert string 'Ana Souza' to DOUBLE
+perfil seguro: [('cpf', [], True), ('nome_cliente', [], True), ('email', [], True), ('uf', [['SP', 1766], ['RJ', 746], ['MG', 486]], False), ('valor_total', None, False)]
+alertas seguros (arquivo sujo): ['25 linhas duplicadas', 'uf: 6.04% nulos', 'canal: 1 grafias diferentes para o mesmo valor (espaços/maiúsculas)', 'id_venda: 1 valores não numéricos numa coluna quase toda numérica (exemplos só no painel)', 'valor_total: 15 valores não numéricos numa coluna quase toda numérica (exemplos só no painel)', 'nps: 10 valores não numéricos numa coluna quase toda numérica (exemplos só no painel)']
+erro cru com valor de célula: Conversion Error: Could not convert string 'Fábio Nunes' to INT32 when casting from source column no

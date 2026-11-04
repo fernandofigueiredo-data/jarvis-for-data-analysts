@@ -1,0 +1,20 @@
+[project]
+name = "jarvis-pocs"
+version = "0.0.0"
+description = "Provas de conceito descartáveis (dados sintéticos) para o plano de análise de dados do Jarvis"
+requires-python = ">=3.13"
+dependencies = [
+  "pandas",
+  "duckdb",
+  "charset-normalizer",
+  "psutil",
+  "numpy",
+  "feedparser",
+  "httpx",
+  "trafilatura",
+  "faster-whisper",
+  "claude-agent-sdk>=0.2.176",
+  "soundfile>=0.14.0",
+]
+[tool.uv]
+package = false

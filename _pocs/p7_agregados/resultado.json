@@ -1,0 +1,87 @@
+{
+ "uso normal: faturamento por UF": {
+  "colunas": [
+   "uf",
+   "soma_valor_total",
+   "media_valor_total",
+   "linhas"
+  ],
+  "linhas": [
+   [
+    "SP",
+    2106013.14,
+    1192.5329,
+    1766
+   ],
+   [
+    "RJ",
+    909509.95,
+    1219.1822,
+    746
+   ],
+   [
+    "MG",
+    598163.23,
+    1230.7885,
+    486
+   ]
+  ],
+  "grupos_suprimidos_por_terem_menos_de_k": 1,
+  "k": 5,
+  "sql": "select \"uf\", round(sum(\"valor_total\"), 4) as \"soma_valor_total\", round(avg(\"valor_total\"), 4) as \"media_valor_total\", count(*) as __n from dados group by \"uf\""
+ },
+ "agrupar por cpf (dado pessoal)": {
+  "erro": "'cpf' parece dado pessoal: não pode ser usada para agrupar"
+ },
+ "agrupar por valor_total (quase único por linha)": {
+  "colunas": [
+   "valor_total",
+   "contagem_linhas",
+   "linhas"
+  ],
+  "linhas": [],
+  "grupos_suprimidos_por_terem_menos_de_k": 2981,
+  "k": 5,
+  "sql": "select \"valor_total\", count(*) as \"contagem_linhas\", count(*) as __n from dados group by \"valor_total\""
+ },
+ "máximo de nome (devolveria um nome)": {
+  "erro": "maximo só para números e datas: em texto devolveria o valor de uma linha"
+ },
+ "string_agg (fora da lista)": {
+  "erro": "função 'string_agg' não permitida; use soma, media, mediana, contagem, distintos, desvio, minimo, maximo, p25, p75, p90"
+ },
+ "contagem de e-mails distintos": {
+  "colunas": [
+   "distintos_email",
+   "linhas"
+  ],
+  "linhas": [
+   [
+    3000,
+    3000
+   ]
+  ],
+  "grupos_suprimidos_por_terem_menos_de_k": 0,
+  "k": 5,
+  "sql": "select count(distinct \"email\") as \"distintos_email\", count(*) as __n from dados"
+ },
+ "filtro que isola 1 linha": {
+  "erro": "'email' parece dado pessoal: não pode ser usada em filtro"
+ },
+ "injeção no valor do filtro": {
+  "colunas": [
+   "contagem_linhas",
+   "linhas"
+  ],
+  "linhas": [],
+  "grupos_suprimidos_por_terem_menos_de_k": 1,
+  "k": 5,
+  "sql": "select count(*) as \"contagem_linhas\", count(*) as __n from dados where \"uf\" = 'SP'' or 1=1 --'"
+ },
+ "filtro por e-mail (dado pessoal)": {
+  "erro": "'email' parece dado pessoal: não pode ser usada em filtro"
+ },
+ "erro que citaria um valor": {
+  "erro": "consulta inválida (ConversionException)"
+ }
+}

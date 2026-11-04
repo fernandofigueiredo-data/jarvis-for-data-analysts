@@ -1,0 +1,223 @@
+{
+ "leitura": {
+  "arquivo": "vendas_suja.csv",
+  "codificacao": "cp1252",
+  "separador": ";",
+  "formato_data": "%Y-%m-%d",
+  "colunas_convertidas": {},
+  "segundos_leitura": 0.08
+ },
+ "perfil": {
+  "linhas": 1026,
+  "colunas": [
+   {
+    "coluna": "id_venda",
+    "tipo": "VARCHAR",
+    "nulos_pct": 0.0,
+    "distintos": 985,
+    "top": [
+     [
+      "50",
+      2
+     ],
+     [
+      "599",
+      2
+     ],
+     [
+      "703",
+      2
+     ],
+     [
+      "811",
+      2
+     ],
+     [
+      "930",
+      2
+     ]
+    ]
+   },
+   {
+    "coluna": "data_venda",
+    "tipo": "DATE",
+    "nulos_pct": 0.1,
+    "distintos": 341,
+    "min": "2025-01-02",
+    "max": "2025-12-31"
+   },
+   {
+    "coluna": "uf",
+    "tipo": "VARCHAR",
+    "nulos_pct": 6.04,
+    "distintos": 10,
+    "top": [
+     [
+      "SP",
+      302
+     ],
+     [
+      "RJ",
+      127
+     ],
+     [
+      "MG",
+      95
+     ],
+     [
+      "PR",
+      88
+     ],
+     [
+      "RS",
+      78
+     ]
+    ]
+   },
+   {
+    "coluna": "canal",
+    "tipo": "VARCHAR",
+    "nulos_pct": 0.1,
+    "distintos": 4,
+    "top": [
+     [
+      "Televendas",
+      331
+     ],
+     [
+      "E-commerce",
+      303
+     ],
+     [
+      "Loja física",
+      295
+     ],
+     [
+      " e-commerce ",
+      96
+     ],
+     [
+      null,
+      1
+     ]
+    ],
+    "variantes_grafia": 1
+   },
+   {
+    "coluna": "produto",
+    "tipo": "VARCHAR",
+    "nulos_pct": 0.1,
+    "distintos": 6,
+    "top": [
+     [
+      "Café especial",
+      190
+     ],
+     [
+      "Feijão",
+      173
+     ],
+     [
+      "Pão de queijo",
+      171
+     ],
+     [
+      "Açaí",
+      168
+     ],
+     [
+      "Guaraná",
+      164
+     ]
+    ]
+   },
+   {
+    "coluna": "quantidade",
+    "tipo": "DOUBLE",
+    "nulos_pct": 0.1,
+    "distintos": 18,
+    "min": 1.0,
+    "max": 19.0,
+    "media": 9.9834,
+    "mediana": 10.0,
+    "outliers_3iqr": 0
+   },
+   {
+    "coluna": "valor_unitario",
+    "tipo": "DOUBLE",
+    "nulos_pct": 0.1,
+    "distintos": 971,
+    "min": 5.62,
+    "max": 414.02,
+    "media": 123.7196,
+    "mediana": 110.07,
+    "outliers_3iqr": 0
+   },
+   {
+    "coluna": "valor_total",
+    "tipo": "VARCHAR",
+    "nulos_pct": 0.0,
+    "distintos": 975,
+    "top": [
+     [
+      "n/d",
+      15
+     ],
+     [
+      "920.16",
+      2
+     ],
+     [
+      "2680.6",
+      2
+     ],
+     [
+      "321.49",
+      2
+     ],
+     [
+      "340.94",
+      2
+     ]
+    ]
+   },
+   {
+    "coluna": "nps",
+    "tipo": "VARCHAR",
+    "nulos_pct": 0.1,
+    "distintos": 12,
+    "top": [
+     [
+      "8",
+      111
+     ],
+     [
+      "1",
+      104
+     ],
+     [
+      "0",
+      96
+     ],
+     [
+      "3",
+      94
+     ],
+     [
+      "2",
+      92
+     ]
+    ]
+   }
+  ],
+  "alertas": [
+   "25 linhas duplicadas",
+   "uf: 6.04% nulos",
+   "canal: 1 grafias diferentes para o mesmo valor (espaços/maiúsculas)",
+   "id_venda: 1 valores não numéricos numa coluna quase toda numérica, ex.: ['TOTAL']",
+   "valor_total: 15 valores não numéricos numa coluna quase toda numérica, ex.: ['n/d']",
+   "nps: 10 valores não numéricos numa coluna quase toda numérica, ex.: ['dez']"
+  ],
+  "segundos_perfil": 0.016
+ }
+}

@@ -1,0 +1,270 @@
+{
+ "modelo": "large-v3-turbo",
+ "carga_s": 35.8,
+ "configs": {
+  "atual_jarvis": {
+   "acerto_termos_pct": 85.7,
+   "termos": 84,
+   "latencia_mediana_s": 6.32,
+   "latencia_max_s": 6.66,
+   "erros": [
+    {
+     "voz": "luciana",
+     "esperado": "Jarvis, qual a média de ticket_medio por UF?",
+     "ouvido": "Jarvis, qual a média de ticket mediu por UF?",
+     "faltou": [
+      "ticket_medio"
+     ]
+    },
+    {
+     "voz": "luciana",
+     "esperado": "Qual o p-valor do teste entre e-commerce e loja física?",
+     "ouvido": "Qual o p-valor do teste entre e-câmaras e loja física?",
+     "faltou": [
+      "e-commerce"
+     ]
+    },
+    {
+     "voz": "luciana",
+     "esperado": "Calcula o churn de março a junho.",
+     "ouvido": "Calcula o Chuzum de março a junho.",
+     "faltou": [
+      "churn"
+     ]
+    },
+    {
+     "voz": "luciana",
+     "esperado": "Apaga as linhas com UF nula.",
+     "ouvido": "Apaga as linhas com o F nula.",
+     "faltou": [
+      "uf"
+     ]
+    },
+    {
+     "voz": "eddy",
+     "esperado": "Jarvis, qual a média de ticket_medio por UF?",
+     "ouvido": "Jarvis, qual a média de etiquete mediu por uf?",
+     "faltou": [
+      "ticket_medio"
+     ]
+    },
+    {
+     "voz": "eddy",
+     "esperado": "Quantas linhas têm o CNPJ nulo?",
+     "ouvido": "Quantas linhas tem o CNPJ nu?",
+     "faltou": [
+      "nulo"
+     ]
+    },
+    {
+     "voz": "eddy",
+     "esperado": "Qual o p-valor do teste entre e-commerce e loja física?",
+     "ouvido": "Qual o p-valor do teste entre comércio e loja física?",
+     "faltou": [
+      "e-commerce"
+     ]
+    },
+    {
+     "voz": "eddy",
+     "esperado": "Compara o CAC e o LTV do terceiro trimestre.",
+     "ouvido": "Compara o KQLTV do terceiro trimestre.",
+     "faltou": [
+      "cac"
+     ]
+    },
+    {
+     "voz": "eddy",
+     "esperado": "Calcula o churn de março a junho.",
+     "ouvido": "Calcula o sur de março a junho.",
+     "faltou": [
+      "churn"
+     ]
+    },
+    {
+     "voz": "eddy",
+     "esperado": "Abre o arquivo vendas_2025.csv da pasta Downloads.",
+     "ouvido": "Abre o arquivo vendas 2025. CSV da pasta download.",
+     "faltou": [
+      "downloads"
+     ]
+    },
+    {
+     "voz": "eddy",
+     "esperado": "Qual o percentil noventa e cinco do tempo de entrega?",
+     "ouvido": "Qual o percentil noventa e cinco do tempo de entrega?",
+     "faltou": [
+      "95"
+     ]
+    },
+    {
+     "voz": "eddy",
+     "esperado": "Apaga as linhas com UF nula.",
+     "ouvido": "Apaga as linhas com o nula.",
+     "faltou": [
+      "uf"
+     ]
+    }
+   ]
+  },
+  "prompt_vocab": {
+   "acerto_termos_pct": 90.5,
+   "termos": 84,
+   "latencia_mediana_s": 8.27,
+   "latencia_max_s": 9.86,
+   "erros": [
+    {
+     "voz": "luciana",
+     "esperado": "Jarvis, qual a média de ticket_medio por UF?",
+     "ouvido": "Jarvis, qual a média de ticket mediu por UF?",
+     "faltou": [
+      "ticket_medio"
+     ]
+    },
+    {
+     "voz": "luciana",
+     "esperado": "Qual o p-valor do teste entre e-commerce e loja física?",
+     "ouvido": "Qual o p-valor do teste entre e-câmaras e loja física?",
+     "faltou": [
+      "e-commerce"
+     ]
+    },
+    {
+     "voz": "luciana",
+     "esperado": "Apaga as linhas com UF nula.",
+     "ouvido": "Apaga as linhas com o F nula.",
+     "faltou": [
+      "uf"
+     ]
+    },
+    {
+     "voz": "eddy",
+     "esperado": "Quantas linhas têm o CNPJ nulo?",
+     "ouvido": "Quantas linhas tem o CNPJ nu?",
+     "faltou": [
+      "nulo"
+     ]
+    },
+    {
+     "voz": "eddy",
+     "esperado": "Qual o p-valor do teste entre e-commerce e loja física?",
+     "ouvido": "Qual o p-valor do teste entre comércio e loja física?",
+     "faltou": [
+      "e-commerce"
+     ]
+    },
+    {
+     "voz": "eddy",
+     "esperado": "Calcula o churn de março a junho.",
+     "ouvido": "Calcula o sur de março a junho.",
+     "faltou": [
+      "churn"
+     ]
+    },
+    {
+     "voz": "eddy",
+     "esperado": "Abre o arquivo vendas_2025.csv da pasta Downloads.",
+     "ouvido": "Abre o arquivo vendas 2025. CSV da pasta download.",
+     "faltou": [
+      "downloads"
+     ]
+    },
+    {
+     "voz": "eddy",
+     "esperado": "Apaga as linhas com UF nula.",
+     "ouvido": "Apaga as linhas com o nula.",
+     "faltou": [
+      "uf"
+     ]
+    }
+   ]
+  },
+  "hotwords": {
+   "acerto_termos_pct": 88.1,
+   "termos": 84,
+   "latencia_mediana_s": 8.58,
+   "latencia_max_s": 11.29,
+   "erros": [
+    {
+     "voz": "luciana",
+     "esperado": "Jarvis, qual a média de ticket_medio por UF?",
+     "ouvido": "Jarvis, qual a média de ticket mediu por UF?",
+     "faltou": [
+      "ticket_medio"
+     ]
+    },
+    {
+     "voz": "luciana",
+     "esperado": "Qual o p-valor do teste entre e-commerce e loja física?",
+     "ouvido": "Qual o p-valor do teste entre e-câmaras e loja física?",
+     "faltou": [
+      "e-commerce"
+     ]
+    },
+    {
+     "voz": "luciana",
+     "esperado": "Apaga as linhas com UF nula.",
+     "ouvido": "Apaga as linhas com o F nula.",
+     "faltou": [
+      "uf"
+     ]
+    },
+    {
+     "voz": "eddy",
+     "esperado": "Jarvis, qual a média de ticket_medio por UF?",
+     "ouvido": "Jarvis, qual a média de etiquete mediu por UF?",
+     "faltou": [
+      "ticket_medio"
+     ]
+    },
+    {
+     "voz": "eddy",
+     "esperado": "Quantas linhas têm o CNPJ nulo?",
+     "ouvido": "Quantas linhas tem o CNPJ nu?",
+     "faltou": [
+      "nulo"
+     ]
+    },
+    {
+     "voz": "eddy",
+     "esperado": "Qual o p-valor do teste entre e-commerce e loja física?",
+     "ouvido": "Qual o p-valor do teste entre comércio e loja física?",
+     "faltou": [
+      "e-commerce"
+     ]
+    },
+    {
+     "voz": "eddy",
+     "esperado": "Calcula o churn de março a junho.",
+     "ouvido": "Calcula o sur de março a junho.",
+     "faltou": [
+      "churn"
+     ]
+    },
+    {
+     "voz": "eddy",
+     "esperado": "Abre o arquivo vendas_2025.csv da pasta Downloads.",
+     "ouvido": "Abre o arquivo vendas 2025. CSV da pasta download.",
+     "faltou": [
+      "downloads"
+     ]
+    },
+    {
+     "voz": "eddy",
+     "esperado": "Qual o percentil noventa e cinco do tempo de entrega?",
+     "ouvido": "Qual o percentil noventa e cinco do tempo de entrega?",
+     "faltou": [
+      "95"
+     ]
+    },
+    {
+     "voz": "eddy",
+     "esperado": "Apaga as linhas com UF nula.",
+     "ouvido": "Apaga as linhas com o Fnula.",
+     "faltou": [
+      "uf"
+     ]
+    }
+   ]
+  }
+ }
+}

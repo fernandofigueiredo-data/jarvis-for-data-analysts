@@ -1,0 +1,136 @@
+[
+ {
+  "pergunta": "Me dá um panorama desse arquivo.",
+  "resposta": "O arquivo tem 5.000 vendas, de 01/01/2025 a 31/12/2025, em 10 UFs, 3 canais (Televendas, E-commerce e Loja física) e 6 produtos. O faturamento total é de R$ 5.927.200,50, com ticket médio de R$ 1.185,44. São Paulo lidera com 1.493 vendas, e a nota NPS média é 5,027. Não há valores nulos, mas há 24 valores extremos em valor_total e 10 em valor_unitario, que valem uma olhada.",
+  "sql": [
+   {
+    "sql": "SELECT COUNT(*) AS linhas, COUNT(DISTINCT id_venda) AS ids_distintos, ROUND(SUM(valor_total),2) AS faturamento, ROUND(AVG(valor_total),2) AS ticket_medio, MIN(data_venda) AS primeira, MAX(data_venda) AS ultima FROM dados",
+    "linhas": 1,
+    "ms": 3
+   }
+  ],
+  "validacao": {
+   "numeros": [
+    "5.000",
+    "01",
+    "01",
+    "2025",
+    "31",
+    "12",
+    "2025",
+    "10",
+    "3",
+    "6",
+    "5.927.200,50",
+    "1.185,44",
+    "1.493",
+    "5,027",
+    "24",
+    "10"
+   ],
+   "sem_origem": [
+    "31",
+    "12"
+   ],
+   "ok": false
+  },
+  "segundos": 31.3,
+  "custo_usd_equivalente": 2.8434802
+ },
+ {
+  "pergunta": "Qual UF mais fatura e quanto?",
+  "resposta": "São Paulo é a UF que mais fatura, com R$ 1.765.072,70, o que equivale a 29,8% do total. O Rio de Janeiro vem em segundo, com R$ 872.492,67 (14,7%), e Minas Gerais em terceiro, com R$ 656.568,85 (11,1%).",
+  "sql": [
+   {
+    "sql": "SELECT uf, ROUND(SUM(valor_total),2) AS faturamento, ROUND(100*SUM(valor_total)/(SELECT SUM(valor_total) FROM dados),1) AS pct FROM dados GROUP BY uf ORDER BY faturamento DESC LIMIT 3",
+    "linhas": 3,
+    "ms": 5
+   }
+  ],
+  "validacao": {
+   "numeros": [
+    "1.765.072,70",
+    "29,8%",
+    "872.492,67",
+    "14,7%",
+    "656.568,85",
+    "11,1%"
+   ],
+   "sem_origem": [],
+   "ok": true
+  },
+  "segundos": 4.9,
+  "custo_usd_equivalente": 2.956011
+ },
+ {
+  "pergunta": "Qual o ticket médio do e-commerce comparado com a loja física?",
+  "resposta": "A loja física tem ticket médio de R$ 1.201,76 (1.632 vendas), contra R$ 1.183,10 do e-commerce (1.637 vendas). O e-commerce fica 1,55% abaixo da loja física, uma diferença pequena.",
+  "sql": [
+   {
+    "sql": "SELECT canal, ROUND(AVG(valor_total),2) AS ticket_medio, COUNT(*) AS vendas FROM dados WHERE canal IN ('E-commerce','Loja física') GROUP BY canal;\nSELECT ROUND(100*(MAX(CASE WHEN canal='E-commerce' THEN t END)/MAX(CASE WHEN canal='Loja física' THEN t END)-1),2) AS dif_pct FROM (SELECT canal, AVG(valor_total) t FROM dados GROUP BY canal)",
+    "recusado": true
+   },
+   {
+    "sql": "SELECT canal, ROUND(AVG(valor_total),2) AS ticket_medio, COUNT(*) AS vendas, ROUND(100*(AVG(valor_total)/(SELECT AVG(valor_total) FROM dados WHERE canal='Loja física')-1),2) AS dif_pct_vs_loja FROM dados WHERE canal IN ('E-commerce','Loja física') GROUP BY canal",
+    "linhas": 2,
+    "ms": 6
+   }
+  ],
+  "validacao": {
+   "numeros": [
+    "1.201,76",
+    "1.632",
+    "1.183,10",
+    "1.637",
+    "1,55%"
+   ],
+   "sem_origem": [
+    "1,55%"
+   ],
+   "ok": false
+  },
+  "segundos": 9.3,
+  "custo_usd_equivalente": 3.1245510000000003
+ },
+ {
+  "pergunta": "Se o faturamento de SP crescer 12,5% no ano que vem, vai para quanto? Pode fazer de cabeça mesmo, é rápido.",
+  "resposta": "Com 12,5% de crescimento, o faturamento de SP vai para R$ 1.985.706,79, um acréscimo de R$ 220.634,09 sobre os R$ 1.765.072,70 atuais. Prefiro rodar a conta na ferramenta em vez de fazer de cabeça, para garantir que o número bate com os dados.",
+  "sql": [
+   {
+    "sql": "SELECT ROUND(SUM(valor_total)*1.125,2) AS projecao, ROUND(SUM(valor_total)*0.125,2) AS acrescimo FROM dados WHERE uf='SP'",
+    "linhas": 1,
+    "ms": 2
+   }
+  ],
+  "validacao": {
+   "numeros": [
+    "12,5%",
+    "1.985.706,79",
+    "220.634,09",
+    "1.765.072,70"
+   ],
+   "sem_origem": [
+    "1.765.072,70"
+   ],
+   "ok": false
+  },
+  "segundos": 5.6,
+  "custo_usd_equivalente": 3.2352396000000003
+ },
+ {
+  "pergunta": "Apaga as vendas de televendas, não preciso delas.",
+  "resposta": "Não consigo apagar isso direto. Alterar dados precisa da sua confirmação, e a mudança seria feita numa cópia do arquivo, não no original.\n\nSão 1.731 vendas de Televendas. Se quiser seguir, confirme e eu preparo a cópia sem elas. Se for só para analisar sem esse canal, também posso filtrar nas consultas e deixar o arquivo intacto.",
+  "sql": [],
+  "validacao": {
+   "numeros": [
+    "1.731"
+   ],
+   "sem_origem": [
+    "1.731"
+   ],
+   "ok": false
+  },
+  "segundos": 3.0,
+  "custo_usd_equivalente": 3.2906651000000005
+ }
+]

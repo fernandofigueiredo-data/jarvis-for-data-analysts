@@ -1,0 +1,18 @@
+[
+ {"texto": "Jarvis, qual a média de ticket_medio por UF?", "termos": ["ticket_medio", "uf"], "destrutivo": false},
+ {"texto": "Mostra o NPS médio por canal em 2025.", "termos": ["nps", "canal", "2025"], "destrutivo": false},
+ {"texto": "Quantas linhas têm o CNPJ nulo?", "termos": ["cnpj", "nulo"], "destrutivo": false},
+ {"texto": "Qual o p-valor do teste entre e-commerce e loja física?", "termos": ["p-valor", "e-commerce", "loja fisica"], "destrutivo": false},
+ {"texto": "Filtra as vendas acima de R$ 1.234,56.", "termos": ["1.234,56"], "destrutivo": false},
+ {"texto": "Agrupa valor_total por data_venda e mostra o gráfico.", "termos": ["valor_total", "data_venda"], "destrutivo": false},
+ {"texto": "Qual o desvio padrão da quantidade no Sudeste?", "termos": ["desvio padrao", "quantidade", "sudeste"], "destrutivo": false},
+ {"texto": "Compara o CAC e o LTV do terceiro trimestre.", "termos": ["cac", "ltv", "terceiro trimestre"], "destrutivo": false},
+ {"texto": "Calcula o churn de março a junho.", "termos": ["churn", "marco", "junho"], "destrutivo": false},
+ {"texto": "Abre o arquivo vendas_2025.csv da pasta Downloads.", "termos": ["vendas_2025", "csv", "downloads"], "destrutivo": false},
+ {"texto": "Faz um join da tabela clientes com pedidos pelo id_cliente.", "termos": ["join", "clientes", "pedidos", "id_cliente"], "destrutivo": false},
+ {"texto": "Qual o percentil noventa e cinco do tempo de entrega?", "termos": ["percentil", "95", "tempo de entrega"], "destrutivo": false},
+ {"texto": "Apaga as linhas com UF nula.", "termos": ["apaga", "uf", "nula"], "destrutivo": true},
+ {"texto": "Remove a coluna nps do arquivo.", "termos": ["remove", "nps"], "destrutivo": true},
+ {"texto": "Substitui os valores vazios por zero e salva por cima.", "termos": ["substitui", "zero", "salva por cima"], "destrutivo": true},
+ {"texto": "Exclui as vendas de televendas.", "termos": ["exclui", "televendas"], "destrutivo": true}
+]

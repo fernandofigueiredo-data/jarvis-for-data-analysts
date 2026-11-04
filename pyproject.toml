@@ -1,7 +1,7 @@
 [project]
 name = "jarvis"
 version = "0.1.0"
-description = "Add your description here"
+description = "Assistente de voz para o Mac que responde perguntas sobre CSV sem mandar as linhas para a IA"
 readme = "README.md"
 authors = [
     { name = "Fernando Figueiredo", email = "fernandofigueiredo123@gmail.com" }

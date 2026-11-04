@@ -1,0 +1,5 @@
+{"modo": "duckdb", "arquivo": "vendas_1M.csv", "linhas": 1000000, "leitura_s": 0.29, "total_s": 0.67, "pico_rss_mb": 356}
+{"modo": "pandas", "arquivo": "vendas_1M.csv", "linhas": 1000000, "leitura_s": 0.92, "total_s": 1.2, "pico_rss_mb": 335}
+{"modo": "duckdb", "arquivo": "vendas_5M.csv", "linhas": 5000000, "leitura_s": 0.68, "total_s": 2.46, "pico_rss_mb": 1391}
+{"modo": "pandas", "arquivo": "vendas_5M.csv", "linhas": 5000000, "leitura_s": 1.43, "total_s": 2.83, "pico_rss_mb": 1030}
+transcodificar 309 MB: 0.37 s

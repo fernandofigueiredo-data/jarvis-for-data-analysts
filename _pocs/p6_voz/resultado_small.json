@@ -1,0 +1,361 @@
+{
+ "modelo": "small",
+ "carga_s": 1.3,
+ "configs": {
+  "atual_jarvis": {
+   "acerto_termos_pct": 76.2,
+   "termos": 84,
+   "latencia_mediana_s": 1.3,
+   "latencia_max_s": 2.0,
+   "erros": [
+    {
+     "voz": "luciana",
+     "esperado": "Jarvis, qual a média de ticket_medio por UF?",
+     "ouvido": "Jarvis, qual a média de ticket mediu por UF?",
+     "faltou": [
+      "ticket_medio"
+     ]
+    },
+    {
+     "voz": "luciana",
+     "esperado": "Mostra o NPS médio por canal em 2025.",
+     "ouvido": "Mostra o MPS Médio por canal I 2025.",
+     "faltou": [
+      "nps"
+     ]
+    },
+    {
+     "voz": "luciana",
+     "esperado": "Qual o p-valor do teste entre e-commerce e loja física?",
+     "ouvido": "Qual o p-valor do teste entre e CAMARS e loja física?",
+     "faltou": [
+      "e-commerce"
+     ]
+    },
+    {
+     "voz": "luciana",
+     "esperado": "Compara o CAC e o LTV do terceiro trimestre.",
+     "ouvido": "Compara o Kaki ULTV do terceiro trimestre.",
+     "faltou": [
+      "cac"
+     ]
+    },
+    {
+     "voz": "luciana",
+     "esperado": "Calcula o churn de março a junho.",
+     "ouvido": "Calcula o churro de março a junho.",
+     "faltou": [
+      "churn"
+     ]
+    },
+    {
+     "voz": "luciana",
+     "esperado": "Abre o arquivo vendas_2025.csv da pasta Downloads.",
+     "ouvido": "Abre o arquivo Vendas 2025 CSV da pasta download.",
+     "faltou": [
+      "downloads"
+     ]
+    },
+    {
+     "voz": "luciana",
+     "esperado": "Apaga as linhas com UF nula.",
+     "ouvido": "Apaga as linhas com o F0.",
+     "faltou": [
+      "uf",
+      "nula"
+     ]
+    },
+    {
+     "voz": "luciana",
+     "esperado": "Remove a coluna nps do arquivo.",
+     "ouvido": "Remove a coluna MPS do arquivo.",
+     "faltou": [
+      "nps"
+     ]
+    },
+    {
+     "voz": "eddy",
+     "esperado": "Jarvis, qual a média de ticket_medio por UF?",
+     "ouvido": "Jarvis, clá la média de tiquete medil por uff.",
+     "faltou": [
+      "ticket_medio"
+     ]
+    },
+    {
+     "voz": "eddy",
+     "esperado": "Quantas linhas têm o CNPJ nulo?",
+     "ouvido": "Quantas linhas tem o CNPJL?",
+     "faltou": [
+      "nulo"
+     ]
+    },
+    {
+     "voz": "eddy",
+     "esperado": "Qual o p-valor do teste entre e-commerce e loja física?",
+     "ouvido": "Qual o pê valor do teste entre Comercia e Loja Física?",
+     "faltou": [
+      "p-valor",
+      "e-commerce"
+     ]
+    },
+    {
+     "voz": "eddy",
+     "esperado": "Compara o CAC e o LTV do terceiro trimestre.",
+     "ouvido": "Compar o K-QLTV do terceiro trimestre.",
+     "faltou": [
+      "cac"
+     ]
+    },
+    {
+     "voz": "eddy",
+     "esperado": "Calcula o churn de março a junho.",
+     "ouvido": "Calcula o surdo de março a junho.",
+     "faltou": [
+      "churn"
+     ]
+    },
+    {
+     "voz": "eddy",
+     "esperado": "Abre o arquivo vendas_2025.csv da pasta Downloads.",
+     "ouvido": "Abre o arquivo Vendas 2025. CSV da pasta do Loades.",
+     "faltou": [
+      "downloads"
+     ]
+    },
+    {
+     "voz": "eddy",
+     "esperado": "Faz um join da tabela clientes com pedidos pelo id_cliente.",
+     "ouvido": "Faz um joio em data bela clientes compedidos pelo id cliente.",
+     "faltou": [
+      "join"
+     ]
+    },
+    {
+     "voz": "eddy",
+     "esperado": "Apaga as linhas com UF nula.",
+     "ouvido": "Apaga as linhas com o nula.",
+     "faltou": [
+      "uf"
+     ]
+    },
+    {
+     "voz": "eddy",
+     "esperado": "Substitui os valores vazios por zero e salva por cima.",
+     "ouvido": "Subestitui os valores vazios por zero e salva por cima.",
+     "faltou": [
+      "substitui"
+     ]
+    },
+    {
+     "voz": "eddy",
+     "esperado": "Exclui as vendas de televendas.",
+     "ouvido": "Clui as vendas de televendas.",
+     "faltou": [
+      "exclui"
+     ]
+    }
+   ]
+  },
+  "prompt_vocab": {
+   "acerto_termos_pct": 86.9,
+   "termos": 84,
+   "latencia_mediana_s": 1.34,
+   "latencia_max_s": 1.39,
+   "erros": [
+    {
+     "voz": "luciana",
+     "esperado": "Jarvis, qual a média de ticket_medio por UF?",
+     "ouvido": "Jarvis, qual a média de ticket mediu por UF?",
+     "faltou": [
+      "ticket_medio"
+     ]
+    },
+    {
+     "voz": "luciana",
+     "esperado": "Qual o p-valor do teste entre e-commerce e loja física?",
+     "ouvido": "Qual o p-valor do teste entre ecamas e loja física?",
+     "faltou": [
+      "e-commerce"
+     ]
+    },
+    {
+     "voz": "luciana",
+     "esperado": "Calcula o churn de março a junho.",
+     "ouvido": "Calcula o chuzo de março a junho.",
+     "faltou": [
+      "churn"
+     ]
+    },
+    {
+     "voz": "luciana",
+     "esperado": "Abre o arquivo vendas_2025.csv da pasta Downloads.",
+     "ouvido": "Abre o arquivo vendas 2025 CSV da pasta download.",
+     "faltou": [
+      "downloads"
+     ]
+    },
+    {
+     "voz": "luciana",
+     "esperado": "Faz um join da tabela clientes com pedidos pelo id_cliente.",
+     "ouvido": "Faz um join da tabela clientes compedidos pelo id client.",
+     "faltou": [
+      "id_cliente"
+     ]
+    },
+    {
+     "voz": "eddy",
+     "esperado": "Jarvis, qual a média de ticket_medio por UF?",
+     "ouvido": "Jarvis, clalamedia de ticket media UF.",
+     "faltou": [
+      "ticket_medio"
+     ]
+    },
+    {
+     "voz": "eddy",
+     "esperado": "Quantas linhas têm o CNPJ nulo?",
+     "ouvido": "Quantas linhas tem o CNPJ al-tanu?",
+     "faltou": [
+      "nulo"
+     ]
+    },
+    {
+     "voz": "eddy",
+     "esperado": "Qual o p-valor do teste entre e-commerce e loja física?",
+     "ouvido": "Qual o p-valor do teste entre e-commerci loja física?",
+     "faltou": [
+      "e-commerce"
+     ]
+    },
+    {
+     "voz": "eddy",
+     "esperado": "Calcula o churn de março a junho.",
+     "ouvido": "Calcula o surdo de março a junho.",
+     "faltou": [
+      "churn"
+     ]
+    },
+    {
+     "voz": "eddy",
+     "esperado": "Abre o arquivo vendas_2025.csv da pasta Downloads.",
+     "ouvido": "Abre o arquivo Vendas 2025. CSV da pasta Don Bluades.",
+     "faltou": [
+      "downloads"
+     ]
+    },
+    {
+     "voz": "eddy",
+     "esperado": "Apaga as linhas com UF nula.",
+     "ouvido": "Apaga as linhas com o nula.",
+     "faltou": [
+      "uf"
+     ]
+    }
+   ]
+  },
+  "hotwords": {
+   "acerto_termos_pct": 84.5,
+   "termos": 84,
+   "latencia_mediana_s": 1.35,
+   "latencia_max_s": 1.43,
+   "erros": [
+    {
+     "voz": "luciana",
+     "esperado": "Jarvis, qual a média de ticket_medio por UF?",
+     "ouvido": "Jarvis, qual a média de ticket mediu por UF?",
+     "faltou": [
+      "ticket_medio"
+     ]
+    },
+    {
+     "voz": "luciana",
+     "esperado": "Qual o p-valor do teste entre e-commerce e loja física?",
+     "ouvido": "Qual o p-valor do teste entre ecamas e loja física?",
+     "faltou": [
+      "e-commerce"
+     ]
+    },
+    {
+     "voz": "luciana",
+     "esperado": "Calcula o churn de março a junho.",
+     "ouvido": "Calcula o churro de março a junho.",
+     "faltou": [
+      "churn"
+     ]
+    },
+    {
+     "voz": "luciana",
+     "esperado": "Abre o arquivo vendas_2025.csv da pasta Downloads.",
+     "ouvido": "Abre o arquivo Vendas 2025 CSV da pasta downloadies.",
+     "faltou": [
+      "downloads"
+     ]
+    },
+    {
+     "voz": "luciana",
+     "esperado": "Apaga as linhas com UF nula.",
+     "ouvido": "Apaga as linhas com o F0.",
+     "faltou": [
+      "uf",
+      "nula"
+     ]
+    },
+    {
+     "voz": "eddy",
+     "esperado": "Jarvis, qual a média de ticket_medio por UF?",
+     "ouvido": "Jarvis, clala média de ticket media UF.",
+     "faltou": [
+      "ticket_medio"
+     ]
+    },
+    {
+     "voz": "eddy",
+     "esperado": "Quantas linhas têm o CNPJ nulo?",
+     "ouvido": "Quantas linhas tem o CNPJ?",
+     "faltou": [
+      "nulo"
+     ]
+    },
+    {
+     "voz": "eddy",
+     "esperado": "Qual o p-valor do teste entre e-commerce e loja física?",
+     "ouvido": "Qual o p-valor do teste entre e-comerci loja física?",
+     "faltou": [
+      "e-commerce"
+     ]
+    },
+    {
+     "voz": "eddy",
+     "esperado": "Calcula o churn de março a junho.",
+     "ouvido": "Calcula o surdo de março a junho.",
+     "faltou": [
+      "churn"
+     ]
+    },
+    {
+     "voz": "eddy",
+     "esperado": "Abre o arquivo vendas_2025.csv da pasta Downloads.",
+     "ouvido": "Abre o arquivo Vendas 2025. CSV da pasta Don Bluades.",
+     "faltou": [
+      "downloads"
+     ]
+    },
+    {
+     "voz": "eddy",
+     "esperado": "Apaga as linhas com UF nula.",
+     "ouvido": "Apaga as linhas com o nula.",
+     "faltou": [
+      "uf"
+     ]
+    },
+    {
+     "voz": "eddy",
+     "esperado": "Exclui as vendas de televendas.",
+     "ouvido": "Clui as vendas de televendas.",
+     "faltou": [
+      "exclui"
+     ]
+    }
+   ]
+  }
+ }
+}

@@ -1,0 +1,82 @@
+{
+ "KDnuggets": {
+  "ok": true,
+  "itens": 10,
+  "mais_recente_h": 67.7,
+  "itens_ultimas_24h": 0,
+  "resumo_medio_chars": 152,
+  "itens_com_texto_integral": 0,
+  "ms": 50,
+  "exemplo": "Vibe Coding a Classic Game: Building Breakout Step by Step with an AI Assistant"
+ },
+ "Towards Data Science": {
+  "ok": true,
+  "itens": 20,
+  "mais_recente_h": 17.7,
+  "itens_ultimas_24h": 3,
+  "resumo_medio_chars": 380,
+  "itens_com_texto_integral": 0,
+  "ms": 94,
+  "exemplo": "The Enterprise Context Layer: A Practitioner's Guide to 6 Advanced Architectural Patterns"
+ },
+ "Databricks Blog": {
+  "ok": true,
+  "itens": 10,
+  "mais_recente_h": 36.3,
+  "itens_ultimas_24h": 0,
+  "resumo_medio_chars": 95,
+  "itens_com_texto_integral": 0,
+  "ms": 116,
+  "exemplo": "Lakebase branching for CI/CD: lessons from 100 PR databases"
+ },
+ "DuckDB Blog": {
+  "ok": true,
+  "itens": 10,
+  "mais_recente_h": 105.7,
+  "itens_ultimas_24h": 0,
+  "resumo_medio_chars": 318,
+  "itens_com_texto_integral": 10,
+  "ms": 202,
+  "exemplo": "From Spreadsheets to DuckLake: A Data Engineer's Road to DuckDB"
+ },
+ "dbt Labs Blog": {
+  "ok": true,
+  "itens": 25,
+  "mais_recente_h": 133.5,
+  "itens_ultimas_24h": 0,
+  "resumo_medio_chars": 112,
+  "itens_com_texto_integral": 0,
+  "ms": 325,
+  "exemplo": "How Ramp's internal AI agents crossed a million sessions"
+ },
+ "benn.substack": {
+  "ok": true,
+  "itens": 20,
+  "mais_recente_h": 1209.3,
+  "itens_ultimas_24h": 0,
+  "resumo_medio_chars": 29,
+  "itens_com_texto_integral": 20,
+  "ms": 192,
+  "exemplo": "How to lose your mind"
+ },
+ "Data Hackers (feed?)": {
+  "ok": false,
+  "erro": "HTTPStatusError: Client error '404 Not Found' for url 'https://www.datahackers.news/feed'\nFor more information check:"
+ },
+ "Google News pt-BR": {
+  "ok": true,
+  "itens": 52,
+  "mais_recente_h": 0.5,
+  "itens_ultimas_24h": 1,
+  "resumo_medio_chars": 467,
+  "itens_com_texto_integral": 0,
+  "ms": 149,
+  "exemplo": "Ferramenta on-line facilita a análise de dados genéticos complexos - Poder360"
+ },
+ "Hacker News (Algolia, 48h, >20 pontos, 'data')": {
+  "ok": true,
+  "itens": 6,
+  "ms": 335,
+  "exemplo": "America on Data Centers: listen to 10,000+ city council comments"
+ }
+}

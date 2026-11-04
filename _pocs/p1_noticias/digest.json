@@ -1,0 +1,101 @@
+{
+ "coletados": 147,
+ "apos_dedup": 146,
+ "top": [
+  {
+   "titulo": "Ferramenta on-line facilita a análise de dados genéticos complexos - Poder360",
+   "link": "https://news.google.com/rss/articles/CBMitgFBVV95cUxNRjFLVFJTMDJFYTNVdjdNYjZlVV9kRnI1VmJOYXBVVFAteDBwWVppUUpXOUstWFktTTBLbUtXc3BfRXlwMVh1NnRaS0tNdFRqZWJpU2F0OWlISFl4Rkl0WTFTV2lDbUxTVDdsNHFyOFFsYzRpd0xIR0FyWHQ3d1MtaF9LOWRZdW9GT0xBZzdyTDlKTUo4ZVVTMzZLQ1ZxYUtRR25CM3A5aFFhd2N1SUlJRUVLWG1jUQ?oc=5",
+   "fonte": "Google News pt-BR",
+   "data": "2026-11-02",
+   "pontos": 3.0,
+   "motivo": [
+    "análise de dados"
+   ],
+   "descricao_feed": " Ferramenta on-line facilita a análise de dados genéticos complexos &nbsp;&nbsp; Poder360 "
+  },
+  {
+   "titulo": "Apple investe na Ascend.io, startup de engenharia de dados com IA - MacMagazine",
+   "link": "https://news.google.com/rss/articles/CBMirAFBVV95cUxQYndWUEo0YzA5UFlsTUs1amR1Rjd4Vk1oTERENTR3SW11S1ZWRTgxOXQ0eFZTNVZmN01vQnJRU3JwaWpjN1d5UFp0S2JGNXhZUENFTzVyeXBtX1RWaVNHdzR1b3EzSGUtQ0YtcFVoQnB6MEM2ODJxandJbkkyZGh2WjV6MEZ4c29FMXZuWjUxQzhyU3FlTFlUdzRwZnQ1N3BKMDZIM2gyWFgybXky?oc=5",
+   "fonte": "Google News pt-BR",
+   "data": "2026-10-30",
+   "pontos": 1.5,
+   "motivo": [
+    "engenharia de dados"
+   ],
+   "descricao_feed": " Apple investe na Ascend.io, startup de engenharia de dados com IA &nbsp;&nbsp; MacMagazine "
+  },
+  {
+   "titulo": "The Enterprise Context Layer: A Practitioner's Guide to 6 Advanced Architectural Patterns",
+   "link": "https://towardsdatascience.com/the-enterprise-context-layer-a-practitioners-guide-to-6-advanced-architectural-patterns/",
+   "fonte": "Towards Data Science",
+   "data": "2026-11-01",
+   "pontos": 1.0,
+   "motivo": [
+    "agent"
+   ],
+   "descricao_feed": " Beyond RAG: How modern architectures engineer precise, cost-efficient context for enterprise AI agents. \n The post  The Enterprise Context Layer: A Practitioner's Guide to 6 Advanced Architectural Pa"
+  },
+  {
+   "titulo": "Databricks and SAP unleash end-to-end data & AI capabilities to level up enterprise AI transformation",
+   "link": "https://www.databricks.com/blog/databricks-and-sap-unleash-end-end-data-ai-capabilities-level-enterprise-ai-transformation",
+   "fonte": "Databricks Blog",
+   "data": "2026-10-30",
+   "pontos": 1.0,
+   "motivo": [
+    "databricks"
+   ],
+   "descricao_feed": "Today's AI models are more capable than ever. What they still lack is the business..."
+  },
+  {
+   "titulo": "From Spreadsheets to DuckLake: A Data Engineer's Road to DuckDB",
+   "link": "https://duckdb.org/2026/10/29/from-spreadsheets-to-ducklake.html",
+   "fonte": "DuckDB Blog",
+   "data": "2026-10-29",
+   "pontos": 0.7,
+   "motivo": [
+    "duckdb",
+    "sql",
+    "data engineer"
+   ],
+   "descricao_feed": "After nearly two decades working with increasingly sophisticated data infrastructure, data engineer [Matt Martin](https://www.linkedin.com/in/mattmartin14/) discovered DuckDB could handle many of the "
+  },
+  {
+   "titulo": "How to put generative AI directly into a dbt pipeline with plain SQL",
+   "link": "https://www.getdbt.com/blog/bigquery-generative-ai-dbt-sql-functions",
+   "fonte": "dbt Labs Blog",
+   "data": "2026-10-27",
+   "pontos": 0.6,
+   "motivo": [
+    "dbt",
+    "sql",
+    "llm"
+   ],
+   "descricao_feed": "Google Cloud on wiring BigQuery's AI SQL functions into dbt pipelines, from sentiment scoring to LLM-generated product briefings."
+  },
+  {
+   "titulo": "How Ecolab used an AI migration agent to shrink 84,000 lines of legacy SQL by 6x",
+   "link": "https://www.getdbt.com/blog/ecolab-ai-agent-legacy-sql-migration",
+   "fonte": "dbt Labs Blog",
+   "data": "2026-10-27",
+   "pontos": 0.6,
+   "motivo": [
+    "dbt",
+    "sql",
+    "agent"
+   ],
+   "descricao_feed": "Ecolab and Datafold used an AI migration agent to rebuild a decade of tangled Snowflake logic as clean, documented dbt models."
+  },
+  {
+   "titulo": "dbt without the warehouse (or the bill): DuckDB end to end",
+   "link": "https://www.getdbt.com/blog/dbt-duckdb-warehouse-free-data-transformation",
+   "fonte": "dbt Labs Blog",
+   "data": "2026-10-27",
+   "pontos": 0.6,
+   "motivo": [
+    "duckdb",
+    "dbt"
+   ],
+   "descricao_feed": "dbt v2 ships with a built-in DuckDB adapter, so connecting dbt to a local, offline warehouse takes only a small profile change."
+  }
+ ]
+}

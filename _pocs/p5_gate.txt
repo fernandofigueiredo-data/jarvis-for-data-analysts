@@ -1,0 +1,16 @@
+connect_to_jupyter           leitura=False escrita=True
+use_notebook                 leitura=False escrita=True
+list_notebooks               leitura=True  escrita=True
+read_notebook                leitura=True  escrita=True
+read_cell                    leitura=True  escrita=True
+insert_cell                  leitura=False escrita=True
+insert_execute_code_cell     leitura=False escrita=True
+execute_cell                 leitura=False escrita=True
+execute_code                 leitura=False escrita=True
+overwrite_cell_source        leitura=False escrita=True
+edit_cell_source             leitura=False escrita=True
+delete_cell                  leitura=False escrita=True
+restart_notebook             leitura=False escrita=True
+list_files                   leitura=True  escrita=True
+list_kernels                 leitura=True  escrita=True
+Skill False | Bash False

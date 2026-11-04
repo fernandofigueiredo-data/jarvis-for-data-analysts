@@ -1,0 +1,170 @@
+{
+ "leitura": {
+  "arquivo": "vendas_excel_br.csv",
+  "codificacao": "cp1252",
+  "separador": ";",
+  "formato_data": "%d/%m/%Y",
+  "colunas_convertidas": {
+   "valor_unitario": {
+    "de": "texto pt-BR",
+    "para": "DOUBLE",
+    "nao_convertidos": 0
+   },
+   "valor_total": {
+    "de": "texto pt-BR",
+    "para": "DOUBLE",
+    "nao_convertidos": 0
+   }
+  },
+  "segundos_leitura": 0.047
+ },
+ "perfil": {
+  "linhas": 5000,
+  "colunas": [
+   {
+    "coluna": "id_venda",
+    "tipo": "BIGINT",
+    "nulos_pct": 0.0,
+    "distintos": 4900,
+    "min": 1,
+    "max": 5000,
+    "media": 2500.5,
+    "mediana": 2500.5,
+    "outliers_3iqr": 0
+   },
+   {
+    "coluna": "data_venda",
+    "tipo": "DATE",
+    "nulos_pct": 0.0,
+    "distintos": 359,
+    "min": "2025-01-01",
+    "max": "2025-12-31"
+   },
+   {
+    "coluna": "uf",
+    "tipo": "VARCHAR",
+    "nulos_pct": 0.0,
+    "distintos": 10,
+    "top": [
+     [
+      "SP",
+      1493
+     ],
+     [
+      "RJ",
+      725
+     ],
+     [
+      "MG",
+      575
+     ],
+     [
+      "PR",
+      430
+     ],
+     [
+      "RS",
+      399
+     ]
+    ]
+   },
+   {
+    "coluna": "canal",
+    "tipo": "VARCHAR",
+    "nulos_pct": 0.0,
+    "distintos": 3,
+    "top": [
+     [
+      "Televendas",
+      1731
+     ],
+     [
+      "E-commerce",
+      1637
+     ],
+     [
+      "Loja física",
+      1632
+     ]
+    ]
+   },
+   {
+    "coluna": "produto",
+    "tipo": "VARCHAR",
+    "nulos_pct": 0.0,
+    "distintos": 6,
+    "top": [
+     [
+      "Café especial",
+      852
+     ],
+     [
+      "Pão de queijo",
+      851
+     ],
+     [
+      "Guaraná",
+      847
+     ],
+     [
+      "Açaí",
+      839
+     ],
+     [
+      "Feijão",
+      828
+     ]
+    ]
+   },
+   {
+    "coluna": "quantidade",
+    "tipo": "BIGINT",
+    "nulos_pct": 0.0,
+    "distintos": 19,
+    "min": 1,
+    "max": 19,
+    "media": 9.8886,
+    "mediana": 10.0,
+    "outliers_3iqr": 0
+   },
+   {
+    "coluna": "valor_unitario",
+    "tipo": "DOUBLE",
+    "nulos_pct": 0.0,
+    "distintos": 4552,
+    "min": 5.43,
+    "max": 672.5,
+    "media": 120.2075,
+    "mediana": 106.82,
+    "outliers_3iqr": 10
+   },
+   {
+    "coluna": "valor_total",
+    "tipo": "DOUBLE",
+    "nulos_pct": 0.0,
+    "distintos": 4737,
+    "min": 10.01,
+    "max": 9415.0,
+    "media": 1185.4401,
+    "mediana": 908.1800000000001,
+    "outliers_3iqr": 24
+   },
+   {
+    "coluna": "nps",
+    "tipo": "BIGINT",
+    "nulos_pct": 0.0,
+    "distintos": 11,
+    "min": 0,
+    "max": 10,
+    "media": 5.027,
+    "mediana": 5.0,
+    "outliers_3iqr": 0
+   }
+  ],
+  "alertas": [
+   "valor_unitario: 10 valores extremos (fora de 3×IQR)",
+   "valor_total: 24 valores extremos (fora de 3×IQR)"
+  ],
+  "segundos_perfil": 0.018
+ }
+}

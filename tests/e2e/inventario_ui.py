@@ -1,4 +1,4 @@
-"""Executor do INVENTARIO_TESTES.md: abre o painel num navegador headless, aciona cada item e registra o resultado.
+"""Executor do docs/INVENTARIO_TESTES.md: abre o painel num navegador headless, aciona cada item e registra o resultado.
 
 Não roda no pytest (o nome não começa com test_). Precisa do daemon no ar, de preferência com banco e voz de teste:
 
@@ -6,7 +6,7 @@ Não roda no pytest (o nome não começa com test_). Precisa do daemon no ar, de
     uv run --with playwright --with websockets python tests/e2e/inventario_ui.py --out resultado.json
 
 Na primeira vez: `uv run --with playwright playwright install chromium`. Itens que exigem reiniciar o daemon
-(CON-01/02, JAR-05) ou o microfone (JAR-07) ficam fora daqui e estão descritos no RELATORIO_TESTES.md.
+(CON-01/02, JAR-05) ou o microfone (JAR-07) ficam fora daqui e estão descritos no docs/RELATORIO_TESTES.md.
 """
 import argparse
 import asyncio

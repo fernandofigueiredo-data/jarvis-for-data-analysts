@@ -1,0 +1,5 @@
+Me dá um panorama desse arquivo.              antes=['31', '12'] depois=[] (16 números)
+Qual UF mais fatura e quanto?                 antes=[] depois=[] (6 números)
+Qual o ticket médio do e-commerce comparado c antes=['1,55%'] depois=[] (5 números)
+Se o faturamento de SP crescer 12,5% no ano q antes=['1.765.072,70'] depois=[] (4 números)
+Apaga as vendas de televendas, não preciso de antes=['1.731'] depois=[] (1 números)

@@ -1,0 +1,44 @@
+{
+ "consulta_normal": {
+  "bloqueado": false,
+  "saida": "[('SP', 1765072.7), ('RJ', 872492.67), ('MG', 656568.85)]"
+ },
+ "ler_outro_arquivo": {
+  "bloqueado": true,
+  "erro": "Permission Error: Cannot access file \"/Users/fernandofigueiredo/Documents/projetos/Jarvis/_pocs/p4_isolamento/fora/canario.txt\" - file syste"
+ },
+ "ler_texto": {
+  "bloqueado": true,
+  "erro": "Permission Error: Cannot access file \"/Users/fernandofigueiredo/Documents/projetos/Jarvis/_pocs/p4_isolamento/fora/canario.txt\" - file syste"
+ },
+ "escrever_arquivo": {
+  "bloqueado": true,
+  "erro": "Permission Error: Cannot access file \"/Users/fernandofigueiredo/Documents/projetos/Jarvis/_pocs/p4_isolamento/fora/vazou.csv\" - file system "
+ },
+ "anexar_banco": {
+  "bloqueado": true,
+  "erro": "Permission Error: Cannot access file \"/Users/fernandofigueiredo/Documents/projetos/Jarvis/_pocs/p4_isolamento/fora/x.db\" - file system opera"
+ },
+ "instalar_extensao": {
+  "bloqueado": true,
+  "erro": "Permission Error: Cannot access directory \"/Users/fernandofigueiredo/.duckdb/extensions/v2.0.0/osx_arm64\" - file system operations are disab"
+ },
+ "rede": {
+  "bloqueado": true,
+  "erro": "Permission Error: Cannot access file \"https://example.com/a.csv\" - file system operations are disabled by configuration"
+ },
+ "destravar": {
+  "bloqueado": true,
+  "erro": "Invalid Input Error: Cannot change configuration option \"\"enable_external_access\"\" - the configuration has been locked"
+ },
+ "shell": {
+  "bloqueado": true,
+  "erro": "Permission Error: Cannot access file \"/dev/stdin\" - file system operations are disabled by configuration"
+ },
+ "tempo_limite": {
+  "bloqueado": true,
+  "erro": "INTERRUPT Error: Interrupted!",
+  "segundos": 2.0
+ },
+ "vazou_arquivo": false
+}
