@@ -20,7 +20,27 @@ Como usar e configurar cada parte. Para instalar, veja o [README](../README.md#i
 - `senhora`: "O tempo acabou, senhora."
 - `nenhum`: "O tempo acabou."
 
-As outras variáveis (modelo, voz, Whisper, cidade, ElevenLabs, pastas de dados) estão explicadas, uma por linha, no [`.env.example`](../.env.example).
+## Saudação e agenda
+
+"Bom dia, Jarvis" (ou "boa tarde", "boa noite"; por voz não precisa do "Ei Jarvis") recebe a mesma saudação com o seu nome, "Bom dia, Ana.", ou, sem `JARVIS_NOME`, com o tratamento ("Bom dia, senhor."). Logo depois vêm os compromissos de hoje (fuso do Mac), em ordem, com horário e título, lidos do app Calendário: valem as contas sincronizadas nele (iCloud, Google, Exchange). Sem compromissos, ele diz isso; se o Calendário não responder, ele avisa que não conseguiu ler a agenda.
+
+## Local e clima
+
+O campo Local do rodapé e o clima vêm, nesta ordem:
+1. de `JARVIS_LOCATION`, se você definir uma cidade;
+2. da localização do Mac, pelo app auxiliar "Jarvis Localização" (`src/jarvis/mac/localizacao/`). O macOS só entrega a localização a um app com permissão, e o Python do Jarvis não é um: o app é compilado na primeira vez em `cache/JarvisLocal.app` (precisa das Command Line Tools do Xcode) e o macOS pede a permissão uma vez;
+3. da localização do navegador, quando o painel está aberto num navegador e o Mac não respondeu;
+4. do IP, que costuma apontar para a cidade do provedor: aí o campo mostra "(aprox.)".
+
+O local é relido a cada 30 minutos. As coordenadas vão ao OpenStreetMap só para virar "Cidade/UF". `JARVIS_LOCAL_PRECISO=0` desliga os passos 2 e 3.
+
+## Voz da ElevenLabs
+
+Com `ELEVENLABS_API_KEY` (no `.env` ou no Keychain), o Jarvis fala com a ElevenLabs no lugar da voz do macOS. A voz padrão é a Adam, uma das vozes padrão, que funcionam no plano gratuito; troque com `JARVIS_ELEVEN_VOICE_ID`. Vozes da Voice Library só funcionam pela API em planos pagos. Se a ElevenLabs recusar a fala, o Jarvis usa a voz do macOS e o motivo aparece no feed ("ElevenLabs recusou a fala").
+
+## Outras variáveis
+
+As outras variáveis (modelo, voz, Whisper, pastas de dados) estão explicadas, uma por linha, no [`.env.example`](../.env.example).
 
 ## Notícias
 

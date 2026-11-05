@@ -1,22 +1,90 @@
 @import 'tailwindcss';
 
-@theme {
-  --color-jv-bg: #050b16;
-  --color-jv-panel: #0a1626;
-  --color-jv-cyan: #22d3ee;
-  --color-jv-cyan-soft: #67e8f9;
-  --color-jv-ink: #cfe9f3;
-  --color-jv-dim: #6b8aa3;
-  --color-jv-violet: #a78bfa;
-  --color-jv-amber: #fbbf24;
-  --color-jv-green: #34d399;
-  --color-jv-red: #f87171;
-  --font-sans: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Inter', 'Segoe UI', system-ui, sans-serif;
-  --font-mono: 'SF Mono', ui-monospace, 'JetBrains Mono', Menlo, monospace;
+/* Design System — Developer / Data Science / AI (design-system-visual.md v1.0). Fonte única de cores, tipografia,
+   espaçamento e raio. Nada de valor solto nos componentes: só estes tokens (ou os utilitários do Tailwind abaixo). */
+
+/* §10 — tokens CSS, como no material */
+:root {
+  --color-bg-base: #101522;
+  --color-bg-surface: #151c2b;
+  --color-bg-surface-raised: #202938;
+
+  --color-accent-primary: #00e5ff;
+  --color-accent-success: #39ff88;
+  --color-accent-data: #a970ff;
+  --color-accent-warning: #ffb84d;
+
+  --color-text-primary: #f2f7ff;
+  --color-text-secondary: #aab8cc;
+
+  --font-family-ui: 'Inter', -apple-system, 'SF Pro Text', system-ui, sans-serif;
+  --font-family-mono: 'JetBrains Mono', 'SF Mono', 'Fira Code', ui-monospace, monospace;
+
+  --font-size-xs: 0.8rem;
+  --font-size-sm: 0.875rem;
+  --font-size-base: 1rem;
+  --font-size-lg: 1.25rem;
+  --font-size-xl: 1.563rem;
+  --font-size-2xl: 1.953rem;
+  --font-size-3xl: 2.441rem;
+
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-12: 48px;
+  --space-16: 64px;
+
+  --radius-base: 12px;
+  --transition-base: 150ms ease;
+
+  color-scheme: dark;
 }
 
-:root {
-  color-scheme: dark;
+/* §11 — os mesmos tokens com os nomes do tailwind.config do material (bg-surface, text-primary = ciano,
+   text-text-primary = texto…). O espaçamento do Tailwind já é o grid de 4/8 px: só os passos 1·2·3·4·6·8·12·16. */
+@theme {
+  --color-*: initial;
+  --color-base: #101522;
+  --color-surface: #151c2b;
+  --color-surface-raised: #202938;
+  --color-primary: #00e5ff;
+  --color-success: #39ff88;
+  --color-data: #a970ff;
+  --color-warning: #ffb84d;
+  --color-text-primary: #f2f7ff;
+  --color-text-secondary: #aab8cc;
+  --color-transparent: transparent;
+  --color-current: currentColor;
+
+  --font-sans: var(--font-family-ui);
+  --font-mono: var(--font-family-mono);
+
+  --text-*: initial;
+  --text-xs: var(--font-size-xs);
+  --text-xs--line-height: 1.35;
+  --text-sm: var(--font-size-sm);
+  --text-sm--line-height: 1.4;
+  --text-base: var(--font-size-base);
+  --text-base--line-height: 1.5;
+  --text-lg: var(--font-size-lg);
+  --text-lg--line-height: 1.4;
+  --text-xl: var(--font-size-xl);
+  --text-xl--line-height: 1.2;
+  --text-2xl: var(--font-size-2xl);
+  --text-2xl--line-height: 1.1;
+  --text-3xl: var(--font-size-3xl);
+  --text-3xl--line-height: 1.1;
+
+  --radius-*: initial;
+  --radius-base: 12px; /* mesmo nome e valor do :root acima (rounded-base) */
+  --radius-full: 9999px; /* só para círculos: pontos de status, microfone, avatar */
+
+  --shadow-*: initial;
+  --drop-shadow-*: initial;
+  --blur-*: initial;
 }
 
 html,
@@ -25,113 +93,121 @@ body,
   height: 100%;
 }
 
+/* §5 — o chão é Navy liso: profundidade só pela progressão tonal, sem gradiente nem sombra */
 body {
   margin: 0;
-  background-color: var(--color-jv-bg);
-  background-image:
-    radial-gradient(ellipse 60% 45% at 50% 28%, rgba(34, 211, 238, 0.1), transparent 70%),
-    radial-gradient(ellipse 40% 40% at 0% 100%, rgba(139, 92, 246, 0.08), transparent 70%),
-    radial-gradient(ellipse 40% 35% at 100% 0%, rgba(14, 165, 233, 0.08), transparent 70%),
-    linear-gradient(rgba(34, 211, 238, 0.025) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(34, 211, 238, 0.025) 1px, transparent 1px);
-  background-size: 100% 100%, 100% 100%, 100% 100%, 32px 32px, 32px 32px;
-  background-attachment: fixed;
-  color: var(--color-jv-ink);
-  font-family: var(--font-sans);
+  background-color: var(--color-bg-base);
+  color: var(--color-text-primary);
+  font-family: var(--font-family-ui);
+  font-size: var(--font-size-base);
+  font-weight: 400;
   -webkit-font-smoothing: antialiased;
   overflow-x: hidden;
 }
 
 ::selection {
-  background: rgba(34, 211, 238, 0.3);
+  background: color-mix(in oklab, var(--color-accent-primary) 30%, transparent);
 }
 
-/* Anel de foco para quem navega pelo teclado (o clique do mouse não acende). Fica fora das camadas do
-   Tailwind de propósito: vence um `outline-none` esquecido num componente. */
+/* §7 — foco: anel de 2px na cor de interação a 40%. Fica fora das camadas do Tailwind de propósito: vence um
+   `outline-none` esquecido num componente. O clique do mouse não acende. */
 :where(button, a, [role='button'], [tabindex]:not([tabindex='-1'])):focus-visible {
-  outline: 2px solid var(--color-jv-cyan-soft);
+  outline: 2px solid color-mix(in oklab, var(--color-accent-primary) 40%, transparent);
   outline-offset: 2px;
 }
 /* campos dentro de cápsulas: o anel vai na cápsula inteira */
 .field-ring:focus-within {
-  outline: 2px solid var(--color-jv-cyan-soft);
+  outline: 2px solid color-mix(in oklab, var(--color-accent-primary) 40%, transparent);
   outline-offset: 2px;
 }
 .field-ring button:focus-visible {
   outline: none;
 }
 
-/* cartão de vidro */
-.glass {
+/* §6 Card — camada 2 (Grafite), borda 1px Grafite secundário, raio 12px, padding 24px */
+.card {
   position: relative;
-  background: linear-gradient(180deg, rgba(13, 31, 54, 0.62), rgba(7, 17, 32, 0.62));
-  border: 1px solid rgba(34, 211, 238, 0.18);
-  border-radius: 12px;
-  box-shadow:
-    0 0 22px -10px rgba(34, 211, 238, 0.45),
-    inset 0 1px 0 rgba(255, 255, 255, 0.04),
-    inset 0 0 30px -18px rgba(34, 211, 238, 0.35);
-  backdrop-filter: blur(14px);
-  -webkit-backdrop-filter: blur(14px);
+  background: var(--color-bg-surface);
+  border: 1px solid var(--color-bg-surface-raised);
+  border-radius: var(--radius-base);
+  transition: background-color var(--transition-base), border-color var(--transition-base);
 }
-/* vidro que flutua sobre outros cartões (conversa, menus): quase opaco, senão o texto de trás atravessa */
-.glass.glass-solid {
-  background: linear-gradient(180deg, rgba(13, 31, 54, 0.97), rgba(7, 17, 32, 0.98));
-  box-shadow:
-    0 18px 48px -12px rgba(0, 0, 0, 0.75),
-    0 0 22px -10px rgba(34, 211, 238, 0.45),
-    inset 0 1px 0 rgba(255, 255, 255, 0.04);
-}
-.glass::before {
-  /* fio de luz no topo */
-  content: '';
-  position: absolute;
-  inset: -1px 18% auto;
-  height: 1px;
-  background: linear-gradient(90deg, transparent, rgba(103, 232, 249, 0.7), transparent);
-  pointer-events: none;
+/* camada 3 (Grafite secundário): o que flutua sobre os cartões — conversa, dados, menus */
+.card.card-raised {
+  background: var(--color-bg-surface-raised);
+  border-color: color-mix(in oklab, var(--color-text-secondary) 30%, transparent);
 }
 
 .card-title {
-  font-size: 10px;
-  font-weight: 650;
-  letter-spacing: 0.18em;
+  font-size: var(--font-size-xs);
+  font-weight: 600;
+  letter-spacing: 0.12em;
   text-transform: uppercase;
-  color: var(--color-jv-cyan-soft);
-  text-shadow: 0 0 10px rgba(34, 211, 238, 0.55);
+  color: var(--color-text-secondary);
   white-space: nowrap;
 }
 
+/* bloco dentro de um cartão: só a borda da camada seguinte, sem pular camada */
 .tile {
-  background: rgba(10, 26, 46, 0.55);
-  border: 1px solid rgba(34, 211, 238, 0.1);
-  border-radius: 8px;
+  border: 1px solid var(--color-bg-surface-raised);
+  border-radius: var(--radius-base);
+  transition: background-color var(--transition-base), border-color var(--transition-base);
+}
+.card-raised .tile {
+  border-color: color-mix(in oklab, var(--color-text-secondary) 30%, transparent);
 }
 
-.glow-text {
-  text-shadow:
-    0 0 12px rgba(34, 211, 238, 0.7),
-    0 0 28px rgba(34, 211, 238, 0.35);
+/* §6 Botão primário — Ciano com texto Navy; hover escurece 8%; active 15% */
+.btn-primary {
+  background: var(--color-accent-primary);
+  color: var(--color-bg-base);
+  font-weight: 500;
+  border-radius: var(--radius-base);
+  transition: background-color var(--transition-base);
+}
+.btn-primary:hover {
+  background: color-mix(in oklab, var(--color-accent-primary) 92%, black);
+}
+.btn-primary:active {
+  background: color-mix(in oklab, var(--color-accent-primary) 85%, black);
 }
 
+/* §6 Botão secundário — transparente, borda 1px texto secundário, texto primário; hover: borda Ciano */
+.btn-secondary,
+.icon-btn {
+  background: transparent;
+  border: 1px solid var(--color-text-secondary);
+  color: var(--color-text-primary);
+  font-weight: 500;
+  border-radius: var(--radius-base);
+  transition: border-color var(--transition-base), color var(--transition-base);
+}
+.btn-secondary:hover,
+.icon-btn:hover {
+  border-color: var(--color-accent-primary);
+}
+.btn-secondary[aria-pressed='true'],
+.icon-btn[aria-pressed='true'] {
+  border-color: var(--color-accent-primary);
+  color: var(--color-accent-primary);
+}
 .icon-btn {
   display: grid;
   place-items: center;
   width: 32px;
   height: 32px;
-  border-radius: 9px;
-  border: 1px solid rgba(34, 211, 238, 0.16);
-  background: rgba(10, 26, 46, 0.6);
-  color: #9cc7d8;
-  transition:
-    color 0.15s,
-    border-color 0.15s,
-    box-shadow 0.15s;
 }
-.icon-btn:hover {
-  color: var(--color-jv-cyan-soft);
-  border-color: rgba(34, 211, 238, 0.45);
-  box-shadow: 0 0 14px -4px rgba(34, 211, 238, 0.6);
+
+/* §6 Input — fundo Grafite, borda texto secundário a 30%; foco: borda Ciano sólida, sem glow */
+.input {
+  background: var(--color-bg-surface);
+  border: 1px solid color-mix(in oklab, var(--color-text-secondary) 30%, transparent);
+  border-radius: var(--radius-base);
+  color: var(--color-text-primary);
+  transition: border-color var(--transition-base);
+}
+.input:focus-within {
+  border-color: var(--color-accent-primary);
 }
 
 /* barras da forma de onda */
@@ -176,18 +252,14 @@ body {
   animation: jv-blink 1.6s ease-in-out infinite;
 }
 
-/* cartão escolhido na navegação lateral */
+/* cartão escolhido na navegação lateral: o destaque vem da cor de acento na borda (§5), não de brilho */
 @keyframes jv-spotlight {
   0%,
   60% {
-    box-shadow:
-      0 0 0 1px rgba(103, 232, 249, 0.85),
-      0 0 32px -6px rgba(34, 211, 238, 0.9);
+    border-color: var(--color-accent-primary);
   }
   100% {
-    box-shadow:
-      0 0 22px -10px rgba(34, 211, 238, 0.45),
-      inset 0 1px 0 rgba(255, 255, 255, 0.04);
+    border-color: var(--color-bg-surface-raised);
   }
 }
 .spotlight {
@@ -196,7 +268,7 @@ body {
 
 .scroll-thin {
   scrollbar-width: thin;
-  scrollbar-color: rgba(34, 211, 238, 0.25) transparent;
+  scrollbar-color: var(--color-bg-surface-raised) transparent;
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -209,8 +281,6 @@ body {
   .spotlight {
     animation-duration: 1ms;
     animation-delay: 1.2s;
-    box-shadow:
-      0 0 0 1px rgba(103, 232, 249, 0.85),
-      0 0 32px -6px rgba(34, 211, 238, 0.9);
+    border-color: var(--color-accent-primary);
   }
 }

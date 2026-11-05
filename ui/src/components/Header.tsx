@@ -21,19 +21,20 @@ function StatusPill() {
   const connected = useJarvis((s) => s.connected)
   const health = useJarvis((s) => s.health)
   const values = Object.values(health)
+  // sem vermelho no sistema (§7): offline e degradado são "precisa da sua atenção"
   const [label, tone, cls] = !connected
-    ? (['OFFLINE', 'red', 'text-rose-300'] as const)
+    ? (['OFFLINE', 'amber', 'text-warning'] as const)
     : values.some((h) => h.status === 'off')
-      ? (['DEGRADADO', 'red', 'text-rose-300'] as const)
+      ? (['DEGRADADO', 'amber', 'text-warning'] as const)
       : values.some((h) => h.status === 'warn')
-        ? (['ATENÇÃO', 'amber', 'text-amber-300'] as const)
-        : (['ÓTIMO', 'green', 'text-emerald-300'] as const)
+        ? (['ATENÇÃO', 'amber', 'text-warning'] as const)
+        : (['ÓTIMO', 'green', 'text-success'] as const)
   return (
     <div
-      className="glass flex w-fit items-center gap-2 rounded-full px-3.5 py-1.5 text-[10px] font-semibold tracking-[0.16em] whitespace-nowrap"
+      className="card flex w-fit items-center gap-2 px-4 py-2 text-xs font-medium tracking-[0.12em] whitespace-nowrap"
       title={connected ? 'Conectado ao daemon' : 'Daemon desconectado — exibindo dados de demonstração'}
     >
-      <span className="text-slate-400">STATUS DO SISTEMA</span>
+      <span className="text-text-secondary">STATUS DO SISTEMA</span>
       <Dot tone={tone} pulse />
       <span className={cls}>{label}</span>
     </div>
@@ -61,17 +62,17 @@ function Notifications() {
         }}
       >
         <Bell size={15} />
-        {unseen > 0 && <span className="absolute top-1.5 right-1.5 h-1.5 w-1.5 rounded-full bg-rose-400 shadow-[0_0_6px_#f87171]" />}
+        {unseen > 0 && <span className="absolute top-1 right-1 h-2 w-2 rounded-full bg-warning" />}
       </button>
       <Popover open={open} onClose={close} label="Notificações">
         {alerts.length === 0 ? (
-          <p className="py-2 text-[11.5px] text-slate-400">Nenhum alerta por enquanto.</p>
+          <p className="py-2 text-xs text-text-secondary">Nenhum alerta por enquanto.</p>
         ) : (
-          <ul className="scroll-thin flex max-h-72 flex-col gap-1.5 overflow-y-auto">
+          <ul className="scroll-thin flex max-h-72 flex-col gap-2 overflow-y-auto">
             {alerts.slice(0, 12).map((a) => (
-              <li key={a.id} className="tile px-2 py-1.5 leading-tight">
-                <div className={`text-[11.5px] ${a.kind === 'warn' ? 'text-amber-200' : 'text-cyan-50'}`}>{a.title}</div>
-                <div className="text-[10px] text-slate-400">
+              <li key={a.id} className="tile px-2 py-2 leading-tight">
+                <div className={`text-xs ${a.kind === 'warn' ? 'text-warning' : 'text-text-primary'}`}>{a.title}</div>
+                <div className="text-xs text-text-secondary">
                   {a.subtitle ? `${a.subtitle} · ` : ''}
                   {timeAgo(a.ts)}
                 </div>
@@ -104,19 +105,19 @@ function SettingsInfo() {
         <Settings size={15} />
       </button>
       <Popover open={open} onClose={close} label="Configurações">
-        <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-[11.5px]">
+        <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-xs">
           {rows.map(([k, v]) => (
             <div key={k} className="contents">
-              <dt className="text-slate-400">{k}</dt>
-              <dd className="truncate text-cyan-50" title={v}>
+              <dt className="text-text-secondary">{k}</dt>
+              <dd className="truncate text-text-primary" title={v}>
                 {v}
               </dd>
             </div>
           ))}
         </dl>
-        <p className="mt-2.5 border-t border-cyan-400/10 pt-2 text-[10.5px] leading-snug text-slate-400">
-          Modo de voz, modelo e escrita mudam ao abrir o Jarvis: <code className="text-cyan-200">uv run jarvis --help</code> e
-          variáveis do <code className="text-cyan-200">.env</code> (README).
+        <p className="mt-3 border-t border-text-secondary/30 pt-2 text-xs leading-snug text-text-secondary">
+          Modo de voz, modelo e escrita mudam ao abrir o Jarvis: <code className="font-mono text-success">uv run jarvis --help</code> e
+          variáveis do <code className="font-mono text-success">.env</code> (README).
         </p>
       </Popover>
     </div>
@@ -133,7 +134,7 @@ function MobileNav() {
         <Menu size={15} />
       </button>
       <Popover open={open} onClose={close} label="Seções" align="left">
-        <nav aria-label="Seções" className="flex flex-col gap-[2px]">
+        <nav aria-label="Seções" className="flex flex-col gap-1">
           <NavList onPick={close} />
         </nav>
       </Popover>
@@ -161,14 +162,14 @@ export default function Header() {
   }, [])
 
   return (
-    <header className="grid shrink-0 grid-cols-1 items-center gap-3 sm:grid-cols-[1fr_auto_1fr]">
+    <header className="grid shrink-0 grid-cols-1 items-center gap-4 sm:grid-cols-[1fr_auto_1fr]">
       <div className="flex justify-center sm:justify-start">
         <StatusPill />
       </div>
 
       <div className="text-center leading-none">
-        <div className="text-[11px] tracking-wide text-slate-400 first-letter:uppercase">{dateFmt.format(now)}</div>
-        <div className="glow-text mt-1 font-mono text-[28px] font-semibold tabular-nums tracking-[0.08em] text-cyan-200">
+        <div className="text-xs text-text-secondary first-letter:uppercase">{dateFmt.format(now)}</div>
+        <div className="mt-1 font-mono text-xl font-medium tabular-nums tracking-[0.08em] text-text-primary">
           {timeFmt.format(now)}
         </div>
       </div>
@@ -176,7 +177,7 @@ export default function Header() {
       <div className="flex min-w-0 items-center justify-center gap-2 sm:justify-end">
         <MobileNav />
         <form
-          className="glass field-ring flex h-8 min-w-0 flex-1 items-center gap-2 rounded-[9px] px-2.5 sm:max-w-[210px]"
+          className="input field-ring flex h-8 min-w-0 flex-1 items-center gap-2 px-3 sm:max-w-[210px]"
           onSubmit={(e) => {
             e.preventDefault()
             const text = q.trim()
@@ -187,16 +188,16 @@ export default function Header() {
             setQ('')
           }}
         >
-          <Search size={13} className="shrink-0 text-cyan-400/70" />
+          <Search size={14} className="shrink-0 text-text-secondary" />
           <input
             ref={field}
             value={q}
             onChange={(e) => setQ(e.target.value)}
             placeholder="Pesquisar ou comandar…"
             aria-label="Pergunte ou dê um comando ao Jarvis"
-            className="min-w-0 flex-1 bg-transparent text-[11.5px] text-cyan-50 placeholder:text-slate-400 focus:outline-none"
+            className="min-w-0 flex-1 bg-transparent text-xs text-text-primary placeholder:text-text-secondary focus:outline-none"
           />
-          <kbd className="hidden rounded border border-slate-600/50 px-1 text-[10px] text-slate-400 lg:block">⌘K</kbd>
+          <kbd className="hidden rounded-base border border-text-secondary/30 px-1 font-mono text-xs text-text-secondary lg:block">⌘K</kbd>
         </form>
         <button
           tabIndex={0}
@@ -210,13 +211,13 @@ export default function Header() {
         </button>
         <Notifications />
         <SettingsInfo />
-        <div className="glass hidden shrink-0 items-center gap-2 rounded-full py-1 pr-3 pl-1 lg:flex">
-          <span className="grid h-7 w-7 place-items-center rounded-full bg-gradient-to-br from-cyan-400/40 to-violet-500/40 ring-1 ring-cyan-300/50">
-            <UserRound size={14} className="text-cyan-50" />
+        <div className="card hidden shrink-0 items-center gap-2 py-1 pr-3 pl-1 lg:flex">
+          <span className="grid h-7 w-7 place-items-center rounded-full bg-surface-raised">
+            <UserRound size={14} className="text-text-primary" />
           </span>
           <span className="leading-tight">
-            <span className="block text-[11px] font-medium text-cyan-50">Operador</span>
-            <span className="block text-[10px] tracking-wider text-cyan-400/80">Comandante</span>
+            <span className="block text-xs font-medium text-text-primary">Operador</span>
+            <span className="block text-xs text-text-secondary">Comandante</span>
           </span>
         </div>
       </div>

@@ -13,12 +13,15 @@ from collections.abc import Callable
 import httpx
 
 from jarvis import config
+from jarvis.events import bus
 from jarvis.keychain import get_secret
 
 # Fim de frase só com espaço depois: no fim do pedaço, "R$ 50." pode ainda virar "R$ 50.657,14" no próximo.
 # A última frase da resposta sai pelo flush().
 SENTENCE = re.compile(r"^(.+?[.!?;:…])(?=\s)", re.S)
-ELEVEN_DEFAULT_VOICE = "pNInz6obpgDQGcFmaJgB"  # voz masculina multilíngue padrão da ElevenLabs
+# Voz padrão (premade) da ElevenLabs, multilíngue: funciona no plano gratuito. Vozes da Voice Library dão
+# 402 paid_plan_required pela API no plano gratuito. JARVIS_ELEVEN_VOICE_ID troca.
+ELEVEN_DEFAULT_VOICE = "pNInz6obpgDQGcFmaJgB"
 
 
 def clean(text: str) -> str:
@@ -40,6 +43,7 @@ class Speaker:
         self.guard: Callable[[str], str] | None = None
         self.eleven_key = get_secret("ELEVENLABS_API_KEY")
         self.voice_id = config.ELEVEN_VOICE_ID or ELEVEN_DEFAULT_VOICE
+        self.eleven_errors: set[str] = set()
         threading.Thread(target=self._pump, daemon=True, name="tts").start()
 
     @property
@@ -119,6 +123,9 @@ class Speaker:
                 return
             except Exception as exc:
                 print(f"  ElevenLabs falhou, usando a voz do macOS: {exc}")
+                if str(exc) not in self.eleven_errors:  # avisa no painel uma vez: a voz mudou e por quê
+                    self.eleven_errors.add(str(exc))
+                    bus.feed_item("ElevenLabs recusou a fala", "warn", f"{exc} · usando a voz do macOS"[:160])
         self._run(["say", "-v", config.TTS_VOICE, "-r", "195", text])
 
     def _run(self, cmd: list[str]) -> None:
@@ -135,7 +142,8 @@ class Speaker:
                            params={"output_format": "mp3_44100_128"},
                            headers={"xi-api-key": self.eleven_key},
                            json={"text": text, "model_id": "eleven_flash_v2_5", "language_code": "pt"}, timeout=30)
-            r.raise_for_status()
+            if r.status_code != 200:  # o corpo diz o motivo (ex.: voice_not_found para um ID fora da conta)
+                raise RuntimeError(f"HTTP {r.status_code} para a voz {self.voice_id}: {r.text[:200]}")
             path.write_bytes(r.content)
         return path
 

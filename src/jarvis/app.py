@@ -138,7 +138,10 @@ class Jarvis:
             if tick % 15 == 0:  # rede e clima são mais caros: a cada 30 s
                 place = await asyncio.to_thread(telemetry.place)
                 self._net = {"network": await asyncio.to_thread(telemetry.network),
-                             "weather": await asyncio.to_thread(telemetry.weather), "location": place["name"]}
+                             "weather": await asyncio.to_thread(telemetry.weather), "location": place["name"],
+                             "locationApprox": place.get("approx", False),
+                             # o painel só pede a localização ao navegador quando o Mac não a deu
+                             "locationAsk": bool(place.get("approx")) and config.LOCAL_PRECISO and not config.LOCATION}
                 payload |= self._net
             bus.emit(payload)
             tick += 1
@@ -359,6 +362,8 @@ class Jarvis:
                 self.submit(quick[1], shown=quick[0])
             elif msg.get("id") == "voice":
                 self.arm()
+        elif kind == "location":
+            await self.on_location(msg)
         elif kind == "ptt" and not self.recorder:
             if msg.get("down"):
                 self.voice_unavailable()
@@ -370,6 +375,17 @@ class Jarvis:
             else:
                 audio = self.recorder.release()
                 threading.Thread(target=self._ptt_turn, args=(audio,), daemon=True).start()
+
+    async def on_location(self, msg: dict) -> None:
+        """Posição do navegador do painel (com a permissão dele): vira o campo Local e o clima na hora."""
+        lat, lon = msg.get("lat"), msg.get("lon")
+        if config.LOCATION or not config.LOCAL_PRECISO or not all(isinstance(v, (int, float)) for v in (lat, lon)) \
+                or not (-90 <= lat <= 90 and -180 <= lon <= 180):
+            return
+        if place := await asyncio.to_thread(telemetry.set_precise, float(lat), float(lon)):
+            self._net = {**getattr(self, "_net", {}), "location": place["name"], "locationApprox": False,
+                         "weather": await asyncio.to_thread(telemetry.weather)}
+            bus.emit({"type": "telemetry", **await asyncio.to_thread(telemetry.system), **self._net})
 
     # ------------------------------------------------------------------ voz
     def arm(self) -> None:
@@ -426,6 +442,8 @@ class Jarvis:
             return
         talking = self.busy or self.speaker.speaking
         woke, rest, mid = split_wake(text)
+        if not woke and router.greeting_period(text):
+            woke, rest, mid = True, text, False  # "bom dia, Jarvis": o nome vem no fim, e a frase inteira é o pedido
         if talking:
             # Enquanto ele fala, só o nome dele ou "para" interrompe: o eco da própria voz não tem "Jarvis"
             if woke or is_stop(text):

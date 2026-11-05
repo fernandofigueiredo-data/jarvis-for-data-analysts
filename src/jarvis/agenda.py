@@ -78,6 +78,25 @@ def today(wait: float = 0) -> list[dict] | None:
     return sorted(events, key=lambda e: e["start"])
 
 
+def resumo_hoje(wait: float = 15) -> str:
+    """Compromissos de hoje (fuso do Mac) numa frase falável: horário e título, em ordem cronológica."""
+    events = today(wait)
+    if events is None:
+        return "Não consegui acessar sua agenda agora."
+    tz = datetime.now().astimezone().tzinfo
+    hoje = datetime.now(tz).date()
+    itens = []
+    for ev in events:  # today() já vem ordenado pelo início
+        start = datetime.fromisoformat(ev["start"]).astimezone(tz)
+        if ev["time"] == "Dia todo":
+            itens.append(f"o dia todo, {ev['title']}")
+        elif start.date() == hoje:
+            itens.append(f"{start:%H:%M}, {ev['title']}")
+    if not itens:
+        return "Não há compromissos na sua agenda hoje."
+    return "Hoje você tem: " + "; ".join(itens) + "."
+
+
 def start_loop(on_update: Callable[[list[dict]], None]) -> None:
     """Relê o Calendário a cada 10 min (e na virada do dia) e publica a cada minuto, para o "Em 5 min" andar."""
     global _looping

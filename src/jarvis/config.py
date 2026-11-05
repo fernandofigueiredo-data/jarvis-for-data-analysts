@@ -33,7 +33,10 @@ LANGUAGE = "pt"
 TTS_VOICE = os.getenv("JARVIS_VOICE", "Luciana")  # voz do macOS em pt-BR
 ELEVEN_VOICE_ID = os.getenv("JARVIS_ELEVEN_VOICE_ID", "")
 
-LOCATION = os.getenv("JARVIS_LOCATION", "")  # "São Paulo" etc.; vazio = descobre pelo IP
+# "São Paulo" etc.; vazio = detecta (localização do Mac ou do navegador do painel; sem elas, aproximada pelo IP)
+LOCATION = os.getenv("JARVIS_LOCATION", "")
+# 0 = nunca pede a localização ao Mac nem ao navegador: só JARVIS_LOCATION ou o IP (aproximado)
+LOCAL_PRECISO = os.getenv("JARVIS_LOCAL_PRECISO", "1") != "0"
 
 # Arquivos de dados: o Jarvis só abre o que estiver nestas pastas (separadas por ":")
 DATA_FOLDERS = [Path(p).expanduser() for p in

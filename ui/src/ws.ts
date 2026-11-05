@@ -39,12 +39,17 @@ function open() {
     useJarvis.getState().reset()
     useJarvis.getState().setConnected(true)
     loadHistory()
+    locationAsked = false
   }
   ws.onmessage = (ev) => {
     if (typeof ev.data !== 'string') return
     try {
       const msg = JSON.parse(ev.data) as ServerMessage
       if (msg && typeof msg.type === 'string') useJarvis.getState().apply(msg)
+      if (msg.type === 'telemetry' && msg.locationAsk && !locationAsked) {
+        locationAsked = true
+        sendLocation()
+      }
     } catch {
       // mensagem malformada: ignora
     }
@@ -57,6 +62,20 @@ function open() {
     startMock()
     scheduleRetry()
   }
+}
+
+let locationAsked = false
+
+/** Posição precisa do navegador, só quando o daemon pede (o Mac não deu a localização). Pede a permissão na primeira
+ *  vez; o daemon faz a geocodificação reversa para "Cidade/UF". Sem permissão ou sem a API (a janela nativa do
+ *  pywebview não a repassa), o campo Local continua com a cidade do IP, marcada como aproximada. */
+function sendLocation() {
+  if (!('geolocation' in navigator)) return
+  navigator.geolocation.getCurrentPosition(
+    ({ coords }) => send({ type: 'location', lat: coords.latitude, lon: coords.longitude, accuracy: coords.accuracy }),
+    () => {}, // negado ou indisponível: fica a aproximação pelo IP
+    { enableHighAccuracy: true, timeout: 20_000, maximumAge: 10 * 60_000 },
+  )
 }
 
 /** Conversas anteriores (SQLite do daemon). A API não libera CORS, então só quando o painel é servido pelo daemon. */
