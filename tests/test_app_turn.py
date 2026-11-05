@@ -95,3 +95,15 @@ def test_voice_button_without_listening_does_not_stick(monkeypatch):
     j.arm()
     assert j.armed_until == 0 and j.phase == "idle"
     assert bus.feed[0]["title"] == "Voz desligada"
+
+
+@pytest.mark.parametrize("heard", ["Bom dia, Jarvis.", "boa noite jarvis"])
+def test_spoken_greeting_wakes_without_ei_jarvis(monkeypatch, heard):
+    """O nome vem no fim ("bom dia, Jarvis"): a frase inteira vira o pedido, sem precisar do "Ei Jarvis"."""
+    j = app_module.Jarvis("off")
+    j.speaker = QuietSpeaker()
+    sent = []
+    monkeypatch.setattr(j, "submit", sent.append)
+    monkeypatch.setattr(app_module.stt, "transcribe", lambda _audio, prompt=False: (heard, 5))
+    j._wake_turn(b"")
+    assert sent == [heard]

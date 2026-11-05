@@ -26,6 +26,7 @@ Confira tudo de uma vez e mostre uma tabela com ✅ e ❌:
 | Claude Code logado | `claude --version` (o login é testado no passo 5) | Rode `claude` num terminal e faça o `/login` |
 | Voz Luciana (pt-BR) | `say -v '?' \| grep -i luciana` | Ajustes do Sistema › Acessibilidade › Conteúdo Falado › Voz do Sistema › Gerenciar Vozes › Português (Brasil) › Luciana. Sem ela, o Jarvis fala com a voz padrão. |
 | Memória | `sysctl -n hw.memsize` | Só informa a escolha do Whisper no passo 2 |
+| Command Line Tools do Xcode | `xcode-select -p && which swiftc` | `xcode-select --install`. Sem elas, o Local do painel vem só do IP (aproximado). |
 
 ## 2. Perguntas e `.env`
 
@@ -34,7 +35,7 @@ Se já existir um `.env`, mostre os valores atuais de `JARVIS_NOME`, `JARVIS_TRA
 Pergunte:
 1. **Nome**, que entra no prompt ("assistente pessoal de voz da Ana"). Pode ficar vazio.
 2. **Tratamento**: senhor (padrão, no estilo do JARVIS dos filmes), senhora ou nenhum.
-3. **Cidade do clima**: vazio descobre pelo IP.
+3. **Cidade do clima**: vazio detecta pela localização do Mac (pede permissão no passo 8) e, sem ela, pelo IP. Se a pessoa não quiser que o Jarvis use a localização, grave `JARVIS_LOCAL_PRECISO=0`.
 4. **Modelo do Whisper**: `small` é o padrão (~460 MB). Com 16 GB de RAM ou mais, ofereça `medium`, que erra menos e é mais lento. Com 8 GB, recomende `small`.
 5. **Temas de notícias** que sobem no resumo diário: ofereça o padrão do `.env.example`.
 6. **Pastas de dados**: o padrão é Downloads, Documentos e Mesa.
@@ -95,7 +96,16 @@ O Jarvis roda dentro do Terminal, então as permissões são do **Terminal**. Ex
 
 O Microfone também é pedido sozinho na primeira vez. Depois de liberar o Monitoramento de Entrada, é preciso fechar e reabrir o Terminal.
 
+**Localização** (pule se `JARVIS_LOCATION` estiver preenchida ou `JARVIS_LOCAL_PRECISO=0`): ela é do app auxiliar "Jarvis Localização", não do Terminal. Peça a permissão agora, para ela não surgir de surpresa na primeira abertura:
+
+```bash
+uv run python -c "from jarvis.mac import location; print(location.current(wait=120))"
+```
+
+Avise antes: o macOS vai mostrar "Jarvis Localização gostaria de usar a sua localização"; clique em Permitir. Volta `{'lat': ..., 'lon': ..., 'acc': ...}` quando deu certo e `None` se foi negado ou não houve resposta (o Local fica pelo IP, com "(aprox.)"; dá para liberar depois em Ajustes › Privacidade e Segurança › Serviços de Localização). Não mostre as coordenadas na conversa: diga só se deu certo.
+
 Peça para a pessoa clicar no Jarvis do Dock. Na primeira vez, o Whisper baixa o modelo, e isso leva de um a dois minutos. Quando a janela abrir, sugira três testes:
+- "Bom dia, Jarvis." (saudação com a agenda de hoje)
 - "Ei Jarvis, abre o Safari."
 - "Ei Jarvis, quais as notícias de hoje?"
 - Arrastar `exemplos/vendas_exemplo.csv` para o painel e perguntar "qual UF mais fatura?".
@@ -104,5 +114,5 @@ Peça para a pessoa clicar no Jarvis do Dock. Na primeira vez, o Whisper baixa o
 
 Termine com:
 - o que foi configurado;
-- o que ficou pendente (voz Luciana, plugin, permissões não confirmadas);
+- o que ficou pendente (voz Luciana, plugin, permissões não confirmadas, localização);
 - os comandos do dia a dia: o ícone do Dock, `uv run jarvis --mode off` para usar sem microfone e `/diagnostico` se algo parar de funcionar.

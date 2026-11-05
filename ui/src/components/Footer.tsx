@@ -19,12 +19,12 @@ function InfoChip({
   className?: string
 }) {
   return (
-    <div className={`glass flex min-w-0 items-center gap-2 rounded-lg px-2.5 py-1.5 ${className}`} title={`${label}: ${value}`}>
-      <Icon size={14} className="shrink-0 text-cyan-300" />
+    <div className={`card flex min-w-0 items-center gap-2 px-3 py-2 ${className}`} title={`${label}: ${value}`}>
+      <Icon size={14} className="shrink-0 text-text-secondary" />
       <div className="min-w-0 leading-tight">
-        <div className="text-[10px] font-semibold tracking-[0.16em] text-slate-400 uppercase">{label}</div>
+        <div className="text-xs font-medium tracking-[0.08em] text-text-secondary uppercase">{label}</div>
         {/* quebra em até duas linhas: "Parcialmente nublado" não vira "Parcial…" */}
-        <div className="line-clamp-2 text-[11px] break-words text-cyan-50">{value}</div>
+        <div className="line-clamp-2 text-xs text-text-primary">{value}</div>
       </div>
     </div>
   )
@@ -87,11 +87,7 @@ function TalkPill() {
     <motion.div
       onClick={() => !typing && setTyping(true)}
       whileHover={typing ? undefined : { scale: 1.01 }}
-      className="field-ring relative flex h-[46px] w-full min-w-0 cursor-text items-center gap-3 rounded-full px-4 lg:w-[360px] lg:shrink-0"
-      style={{
-        background: 'linear-gradient(180deg, rgba(14,40,64,0.85), rgba(8,22,40,0.85))',
-        boxShadow: `0 0 0 1px ${color}66, 0 0 28px -6px ${color}aa, inset 0 0 22px -10px ${color}`,
-      }}
+      className="input field-ring relative flex h-12 w-full min-w-0 cursor-text items-center gap-3 px-4 lg:w-[360px] lg:shrink-0"
     >
       <Waveform bars={14} active={live} amp={phase === 'speaking' ? level : 0.7} height={22} color={color} className="hidden shrink-0 sm:flex" />
       <div className="min-w-0 flex-1 text-center leading-tight">
@@ -111,10 +107,10 @@ function TalkPill() {
               onKeyDown={(e) => e.key === 'Escape' && close()}
               aria-label="Comando para o Jarvis"
               placeholder="Digite um comando para o Jarvis…"
-              className="min-w-0 flex-1 bg-transparent text-center text-[12.5px] text-cyan-50 placeholder:text-slate-400 focus:outline-none"
+              className="min-w-0 flex-1 bg-transparent text-center text-sm text-text-primary placeholder:text-text-secondary focus:outline-none"
             />
-            <button tabIndex={0} type="submit" aria-label="Enviar" className="text-cyan-300 hover:text-cyan-100">
-              <SendHorizonal size={15} />
+            <button tabIndex={0} type="submit" aria-label="Enviar" className="text-primary transition-opacity hover:opacity-80">
+              <SendHorizonal size={16} />
             </button>
           </form>
         ) : (
@@ -126,8 +122,11 @@ function TalkPill() {
             aria-label="Fale com o Jarvis — digitar um comando"
             className="block w-full min-w-0 cursor-text"
           >
-            <span className="glow-text block text-[11px] font-bold tracking-[0.3em] text-cyan-100">FALE COM O JARVIS</span>
-            <span className="block truncate text-[11px]" style={{ color }}>
+            <span className="block text-xs font-medium tracking-[0.2em] text-text-primary">FALE COM O JARVIS</span>
+            <span
+              className={`block truncate text-xs ${phase === 'idle' ? 'text-text-secondary' : ''}`}
+              style={phase === 'idle' ? undefined : { color }}
+            >
               {subtitle}
             </span>
           </button>
@@ -141,10 +140,11 @@ function TalkPill() {
 export default function Footer() {
   const t = useJarvis((s) => s.telemetry)
   return (
-    <footer className="flex shrink-0 flex-col items-stretch gap-2 lg:flex-row lg:items-center">
+    <footer className="flex shrink-0 flex-col items-stretch gap-4 lg:flex-row lg:items-center">
       {/* celular: local e rede lado a lado, clima na linha de baixo com a largura toda */}
-      <div className="grid min-w-0 grid-cols-2 gap-2 sm:grid-cols-[minmax(0,1fr)_minmax(0,1.4fr)_minmax(0,0.9fr)] lg:w-[36%] lg:max-w-[440px] lg:shrink-0">
-        <InfoChip icon={MapPin} label="Local" value={t.location || '—'} />
+      <div className="grid min-w-0 grid-cols-2 gap-2 sm:grid-cols-[minmax(0,1.1fr)_minmax(0,1.3fr)_minmax(0,1fr)] lg:w-[42%] lg:max-w-[520px] lg:shrink-0">
+        {/* posição do navegador (precisa) ou, sem permissão, pelo IP: aí o valor é só aproximado e o campo diz isso */}
+        <InfoChip icon={MapPin} label="Local" value={t.location ? `${t.location}${t.locationApprox ? ' (aprox.)' : ''}` : '—'} />
         <InfoChip
           icon={CloudSun}
           label="Clima"
@@ -155,13 +155,13 @@ export default function Footer() {
       </div>
       <div className="relative flex min-w-0 flex-1 items-center justify-center gap-3">
         <Conversation />
-        <span className="hidden flex-1 border-t border-dashed border-cyan-400/25 lg:block" />
+        <span className="hidden flex-1 border-t border-dashed border-surface-raised lg:block" />
         {/* no celular a barra lateral some: o microfone vem para cá */}
         <div className="md:hidden">
           <PushToTalk size={44} compact />
         </div>
         <TalkPill />
-        <span className="hidden flex-1 border-t border-dashed border-cyan-400/25 lg:block" />
+        <span className="hidden flex-1 border-t border-dashed border-surface-raised lg:block" />
       </div>
       <motion.button
         whileTap={{ scale: 0.96 }}
@@ -169,9 +169,9 @@ export default function Footer() {
           send({ type: 'command', id: 'briefing' })
           useJarvis.getState().setChatOpen(true)
         }}
-        className="flex h-[42px] shrink-0 items-center justify-center gap-2 rounded-xl border border-violet-400/40 bg-gradient-to-r from-violet-500/20 to-cyan-500/15 px-3.5 text-[12px] font-semibold whitespace-nowrap text-violet-100 shadow-[0_0_20px_-6px_#a78bfa] transition-colors hover:border-violet-300/70"
+        className="btn-primary flex h-12 shrink-0 items-center justify-center gap-2 px-4 text-sm whitespace-nowrap"
       >
-        <FileText size={15} />
+        <FileText size={16} />
         Briefing Executivo
       </motion.button>
     </footer>

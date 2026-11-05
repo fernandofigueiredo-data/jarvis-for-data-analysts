@@ -3,12 +3,13 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { useJarvis } from '../store'
 import type { DataResult } from '../types'
 import { uploadFile } from '../upload'
+import { alpha, C } from './ui'
 
-// Série única: um tom só, sem legenda (o título diz o que é). #0891b2 passou no validador de paleta sobre o
-// fundo dos painéis (#0a1626); o ciano da interface (#22d3ee) é claro demais para marca de dado no escuro.
-const MARK = '#0891b2'
-const SURFACE = '#0a1626'
-const GRID = 'rgba(148, 163, 184, 0.18)'
+// Série única: a primeira cor da ordem categórica do design system (Ciano → Verde → Roxo → Âmbar), sem legenda
+// (o título diz o que é). O painel flutua na camada 3 (Grafite secundário).
+const MARK = C.primary
+const SURFACE = C.raised
+const GRID = alpha(C.muted, 30)
 const PERIODO = /_(mes|ano|dia|trimestre|dia_semana)$/
 
 const fmt = new Intl.NumberFormat('pt-BR', { maximumFractionDigits: 2 })
@@ -45,22 +46,22 @@ function Barras({ r, rotulo, valor }: { r: DataResult; rotulo: number; valor: nu
   return (
     <figure className="m-0">
       {/* leitura do item sob o mouse (ou o primeiro): um número de cada vez, não um em cada barra */}
-      <figcaption className="mb-1 h-4 text-[11px] text-slate-300 tabular-nums">
-        {show(linhas[h][rotulo])}: <span className="text-cyan-50">{show(linhas[h][valor])}</span>
+      <figcaption className="mb-1 text-xs text-text-secondary">
+        {show(linhas[h][rotulo])}: <span className="font-mono text-text-primary tabular-nums">{show(linhas[h][valor])}</span>
       </figcaption>
-      <ul role="img" aria-label={`${titulo(r)}, ${linhas.length} barras`} className="flex flex-col gap-[2px]">
+      <ul role="img" aria-label={`${titulo(r)}, ${linhas.length} barras`} className="flex flex-col gap-1">
         {linhas.map((l, i) => (
           <li
             key={i}
             onPointerEnter={() => setHover(i)}
             onPointerLeave={() => setHover(null)}
             title={`${show(l[rotulo])}: ${show(l[valor])}`}
-            className="grid grid-cols-[minmax(0,7.5rem)_1fr] items-center gap-2 py-[3px]"
+            className="grid grid-cols-[minmax(0,7.5rem)_1fr] items-center gap-2"
           >
-            <span className={`truncate text-[11px] ${hover === i ? 'text-cyan-50' : 'text-slate-300'}`}>{show(l[rotulo])}</span>
+            <span className={`truncate text-xs ${hover === i ? 'text-text-primary' : 'text-text-secondary'}`}>{show(l[rotulo])}</span>
             <span className="h-3 border-l" style={{ borderColor: GRID }}>
               <span
-                className="block h-full rounded-r-[4px]"
+                className="block h-full rounded-r-base"
                 style={{ width: `${Math.max(((l[valor] as number) / max) * 100, 0.5)}%`, background: MARK,
                          opacity: hover === null || hover === i ? 1 : 0.55 }}
               />
@@ -68,7 +69,7 @@ function Barras({ r, rotulo, valor }: { r: DataResult; rotulo: number; valor: nu
           </li>
         ))}
       </ul>
-      {r.linhas.length > 12 && <p className="mt-1 text-[10px] text-slate-400">Mostrando 12 de {r.linhas.length}; todos na tabela.</p>}
+      {r.linhas.length > 12 && <p className="mt-1 text-xs text-text-secondary">Mostrando 12 de {r.linhas.length}; todos na tabela.</p>}
     </figure>
   )
 }
@@ -84,8 +85,8 @@ function Linha({ r, rotulo, valor }: { r: DataResult; rotulo: number; valor: num
   const h = hover ?? pts.length - 1 // sem mouse, lê o último ponto
   return (
     <figure className="m-0">
-      <figcaption className="mb-1 h-4 text-[11px] text-slate-300 tabular-nums">
-        {show(pts[h][rotulo])}: <span className="text-cyan-50">{show(pts[h][valor])}</span>
+      <figcaption className="mb-1 text-xs text-text-secondary">
+        {show(pts[h][rotulo])}: <span className="font-mono text-text-primary tabular-nums">{show(pts[h][valor])}</span>
       </figcaption>
       <svg viewBox={`0 0 ${W} ${H}`} className="block w-full" role="img" aria-label={`${titulo(r)}, ${pts.length} pontos`}>
         <line x1={P.l} x2={W - P.r} y1={y(0)} y2={y(0)} stroke={GRID} strokeWidth={1} />
@@ -94,8 +95,8 @@ function Linha({ r, rotulo, valor }: { r: DataResult; rotulo: number; valor: num
         <polyline points={linha} fill="none" stroke={MARK} strokeWidth={2} strokeLinejoin="round" strokeLinecap="round" />
         {hover !== null && <line x1={x(h)} x2={x(h)} y1={P.t} y2={y(0)} stroke={GRID} strokeWidth={1} />}
         <circle cx={x(h)} cy={y(pts[h][valor] as number)} r={4} fill={MARK} stroke={SURFACE} strokeWidth={2} />
-        <text x={P.l} y={H - 4} fontSize={10} fill="#94a3b8">{show(pts[0][rotulo])}</text>
-        <text x={W - P.r} y={H - 4} fontSize={10} fill="#94a3b8" textAnchor="end">{show(pts[pts.length - 1][rotulo])}</text>
+        <text x={P.l} y={H - 4} fontSize={12.8} fill={C.muted} fontFamily="var(--font-family-mono)">{show(pts[0][rotulo])}</text>
+        <text x={W - P.r} y={H - 4} fontSize={12.8} fill={C.muted} fontFamily="var(--font-family-mono)" textAnchor="end">{show(pts[pts.length - 1][rotulo])}</text>
         {/* alvos de hover maiores que o ponto: uma faixa vertical por ponto */}
         {pts.map((_, i) => (
           <rect key={i} x={x(i) - (W - P.l - P.r) / Math.max(pts.length - 1, 1) / 2} y={0}
@@ -111,24 +112,24 @@ function Resultado({ r }: { r: DataResult }) {
   const e = eixos(r)
   return (
     <div className="flex flex-col gap-2">
-      <h3 className="text-[12px] font-semibold text-cyan-50">{titulo(r)}</h3>
+      <h3 className="text-sm font-semibold text-text-primary">{titulo(r)}</h3>
       {e && (e.tempo ? <Linha r={r} rotulo={e.rotulo} valor={e.valor} /> : <Barras r={r} rotulo={e.rotulo} valor={e.valor} />)}
-      <div className="scroll-thin max-h-40 overflow-auto rounded border border-cyan-400/10">
-        <table className="w-full text-[11px] tabular-nums">
-          <thead className="sticky top-0 bg-[#0a1626] text-slate-400">
+      <div className="scroll-thin max-h-40 overflow-auto rounded-base border border-text-secondary/30">
+        <table className="w-full text-xs tabular-nums">
+          <thead className="sticky top-0 bg-surface-raised text-text-secondary">
             <tr>{r.colunas.map((c) => <th key={c} className="px-2 py-1 text-left font-medium">{c}</th>)}</tr>
           </thead>
-          <tbody className="text-slate-200">
+          <tbody className="text-text-primary">
             {r.linhas.map((l, i) => (
-              <tr key={i} className="border-t border-cyan-400/5">
-                {l.map((v, j) => <td key={j} className={`px-2 py-0.5 ${typeof v === 'number' ? 'text-right' : ''}`}>{show(v)}</td>)}
+              <tr key={i} className="border-t border-text-secondary/30">
+                {l.map((v, j) => <td key={j} className={`px-2 py-1 ${typeof v === 'number' ? 'text-right font-mono' : ''}`}>{show(v)}</td>)}
               </tr>
             ))}
           </tbody>
         </table>
       </div>
       {r.grupos_omitidos_por_terem_menos_de_k_linhas > 0 && (
-        <p className="text-[10.5px] text-slate-400">
+        <p className="text-xs text-text-secondary">
           {fmt.format(r.grupos_omitidos_por_terem_menos_de_k_linhas)} grupo(s) com menos de {r.k} linhas omitido(s) por privacidade.
         </p>
       )}
@@ -152,22 +153,22 @@ export default function DataPanel() {
 
   if (!open) return null
   return (
-    // o posicionamento fica num invólucro: o .glass (fora das camadas do Tailwind) força position: relative
-    <div className="absolute top-[64px] right-3 z-30 w-[min(520px,calc(100vw-24px))]">
+    // o posicionamento fica num invólucro: o .card (fora das camadas do Tailwind) força position: relative
+    <div className="absolute top-16 right-3 z-30 w-[min(520px,calc(100vw-24px))]">
       <section
         id="dados"
         aria-label="Dados"
         tabIndex={-1}
         onKeyDown={(e) => e.key === 'Escape' && close()}
         // com a Conversa aberta (presa ao rodapé, até min(46vh, 420px)), o cartão termina acima dela
-        className={`glass glass-solid flex flex-col gap-2 p-3 focus:outline-none ${
+        className={`card card-raised flex flex-col gap-2 p-4 focus:outline-none ${
           chatOpen ? 'max-h-[max(220px,calc(100vh-min(46vh,420px)-170px))]' : 'max-h-[min(70vh,620px)]'
         }`}
       >
         <header className="flex shrink-0 items-center justify-between gap-2">
-          <h2 className="card-title flex min-w-0 items-center gap-1.5">
-            <Table2 size={12} /> Dados
-            {data?.arquivo && <span className="truncate font-normal tracking-normal text-slate-300 normal-case">· {data.arquivo}</span>}
+          <h2 className="card-title flex min-w-0 items-center gap-2">
+            <Table2 size={12} className="text-data" /> Dados
+            {data?.arquivo && <span className="truncate font-mono font-normal tracking-normal text-text-primary normal-case">· {data.arquivo}</span>}
           </h2>
           <div className="flex items-center gap-1">
             <button tabIndex={0} onClick={() => input.current?.click()} className="icon-btn" aria-label="Enviar arquivo CSV"
@@ -182,36 +183,36 @@ export default function DataPanel() {
                  onChange={(e) => { const f = e.target.files?.[0]; if (f) void uploadFile(f); e.target.value = '' }} />
         </header>
 
-        {status && <p className="shrink-0 text-[11.5px] text-cyan-200" role="status">{status}</p>}
+        {status && <p className="shrink-0 text-xs text-text-primary" role="status">{status}</p>}
 
         <div className="scroll-thin flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto pr-1">
           {!data?.arquivo ? (
-            <p className="py-4 text-center text-[11.5px] text-slate-400">
+            <p className="py-4 text-center text-xs text-text-secondary">
               Nenhum arquivo aberto. Diga “Jarvis, abre o arquivo vendas” ou solte um CSV no painel.
             </p>
           ) : (
             <>
-              <p className="text-[11px] text-slate-400 tabular-nums">
+              <p className="text-xs text-text-secondary tabular-nums">
                 {fmt.format(data.linhas ?? 0)} linhas · {data.total_colunas} colunas · {data.codificacao}, separador “{data.separador}”
                 {data.colunas.some((c) => c.dado_pessoal) &&
                   ` · dado pessoal protegido: ${data.colunas.filter((c) => c.dado_pessoal).map((c) => c.coluna).join(', ')}`}
               </p>
               {data.alertas.length > 0 && (
-                <ul className="flex flex-col gap-0.5">
+                <ul className="flex flex-col gap-1">
                   {data.alertas.slice(0, 5).map((a) => (
-                    <li key={a} className="flex items-start gap-1.5 text-[11px] text-amber-200">
-                      <AlertTriangle size={11} className="mt-[2px] shrink-0" aria-label="Alerta" /> {a}
+                    <li key={a} className="flex items-start gap-2 text-xs text-warning">
+                      <AlertTriangle size={12} className="mt-1 shrink-0" aria-label="Alerta" /> {a}
                     </li>
                   ))}
                 </ul>
               )}
               {(data.graficos?.length ?? 0) > 0 && (
-                <div className="flex flex-col gap-1.5">
+                <div className="flex flex-col gap-2">
                   {data.graficos!.slice(0, 2).map((g) => (
                     <figure key={g.url} className="m-0">
-                      {/* PNG do Python isolado, fundo claro como foi desenhado */}
+                      {/* PNG do Python isolado, como o matplotlib desenhou */}
                       <img src={`.${g.url}`} alt={g.titulo ?? 'Gráfico gerado pelo Python isolado'}
-                           className="w-full rounded border border-cyan-400/10 bg-white" />
+                           className="w-full rounded-base border border-text-secondary/30" />
                     </figure>
                   ))}
                 </div>
@@ -220,32 +221,33 @@ export default function DataPanel() {
                 <div role="tablist" aria-label="Últimos resultados" className="flex flex-wrap gap-1">
                   {resultados.map((r, i) => (
                     <button key={i} role="tab" tabIndex={0} aria-selected={atual === r} onClick={() => setSel(i)}
-                            className={`max-w-[11rem] truncate rounded px-2 py-0.5 text-[10.5px] ${
-                              atual === r ? 'bg-cyan-400/15 text-cyan-50' : 'text-slate-400 hover:text-slate-200'}`}>
+                            className={`max-w-[11rem] truncate rounded-base border px-2 text-xs transition-colors ${
+                              atual === r ? 'border-primary/30 bg-primary/15 text-primary'
+                                : 'border-transparent text-text-secondary hover:border-primary'}`}>
                       {titulo(r)}
                     </button>
                   ))}
                 </div>
               )}
               {atual ? <Resultado r={atual} /> : (
-                <p className="text-[11.5px] text-slate-400">Pergunte algo sobre o arquivo: os totais aparecem aqui.</p>
+                <p className="text-xs text-text-secondary">Pergunte algo sobre o arquivo: os totais aparecem aqui.</p>
               )}
             </>
           )}
           {kpis.length > 0 && (
-            <section aria-label="Monitores de KPI" className="flex flex-col gap-1 border-t border-cyan-400/10 pt-2">
+            <section aria-label="Monitores de KPI" className="flex flex-col gap-1 border-t border-text-secondary/30 pt-2">
               <h3 className="card-title">Monitores</h3>
               <ul className="flex flex-col gap-1">
                 {kpis.map((k) => (
-                  <li key={k.nome} className="flex items-start gap-1.5 text-[11px]">
+                  <li key={k.nome} className="flex items-start gap-2 text-xs">
                     {k.ultimo?.disparou ? (
-                      <AlertTriangle size={11} className="mt-[2px] shrink-0 text-amber-300" aria-label="Alerta" />
+                      <AlertTriangle size={12} className="mt-1 shrink-0 text-warning" aria-label="Alerta" />
                     ) : (
-                      <span className="mt-[5px] inline-block h-1.5 w-1.5 shrink-0 rounded-full bg-emerald-400" aria-label="Normal" />
+                      <span className="mt-1 inline-block h-2 w-2 shrink-0 rounded-full bg-success" aria-label="Normal" />
                     )}
-                    <span className={k.ultimo?.disparou ? 'text-amber-100' : 'text-slate-300'}>
+                    <span className={k.ultimo?.disparou ? 'text-warning' : 'text-text-primary'}>
                       {k.ultimo?.texto ?? `${k.nome}: aguardando a primeira conferência`}
-                      <span className="text-slate-500"> · {k.arquivo}</span>
+                      <span className="font-mono text-text-secondary"> · {k.arquivo}</span>
                     </span>
                   </li>
                 ))}

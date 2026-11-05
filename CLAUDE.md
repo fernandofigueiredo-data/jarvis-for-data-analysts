@@ -13,8 +13,8 @@ Assistente de voz para o macOS, em português. Ele responde perguntas sobre CSV 
 - `src/jarvis/brain/`: sessão do Claude (`agent.py`), prompt (`persona.py`), quem libera cada ferramenta (`gate.py`) e ferramentas in-process (`tools.py`)
 - `src/jarvis/dados.py`: leitura de CSV, agregados com anonimato k e conferência dos números
 - `src/jarvis/executor.py`: Python isolado no Seatbelt
-- `src/jarvis/mac/`: AppleScript, Option direito e timers
-- `ui/`: painel em React + Three.js, servido já compilado de `ui/dist`
+- `src/jarvis/mac/`: AppleScript, Option direito, timers e a localização (`location.py` compila e chama o app auxiliar `localizacao/`, em Swift, que pede a permissão de Serviços de Localização)
+- `ui/`: painel em React + Three.js, servido já compilado de `ui/dist`. Cores, fontes, espaçamento e raio vêm dos tokens do design system em `ui/src/index.css`; não use cores soltas nem a paleta padrão do Tailwind (está desligada)
 - `tests/`: unitários. `tests/e2e/` tem os testes de ponta a ponta com o Claude simulado (`daemon_teste.py`, `cerebro_falso.py`).
 
 ## Comandos

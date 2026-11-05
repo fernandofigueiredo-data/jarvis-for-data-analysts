@@ -9,8 +9,10 @@ from collections.abc import Callable
 from dataclasses import dataclass, field
 from datetime import datetime
 
+from jarvis import agenda, config, fillers
 from jarvis.mac import actions as mac
 from jarvis.mac.timers import parse_duration, parse_reminder, say_duration, timers
+from jarvis.wake import NAMES
 
 
 @dataclass
@@ -141,7 +143,34 @@ def _misc_route(t: str, original: str) -> Route | None:
     return None
 
 
+SAUDACOES = {"dia": "Bom dia", "tarde": "Boa tarde", "noite": "Boa noite"}
+
+
+def greeting_period(text: str) -> str | None:
+    """"bom dia, Jarvis" / "boa tarde Jarvis" / "bom tarde, jarvis" (qualquer caixa, com ou sem vírgula) -> período."""
+    t = unicodedata.normalize("NFKD", text.lower())
+    t = re.sub(r"\W+", " ", "".join(c for c in t if not unicodedata.combining(c))).strip()
+    m = re.fullmatch(rf"(?:bom|boa) (dia|tarde|noite) (?:{NAMES})", t)
+    return m[1] if m else None
+
+
+def _greeting_route(text: str) -> Route | None:
+    if not (period := greeting_period(text)):
+        return None
+    # espelha a saudação e já emenda a agenda de hoje (a leitura do Calendário roda fora do loop, em to_thread)
+    return Route("greeting", lambda: f"{saudacao(period)} {agenda.resumo_hoje()}")
+
+
+def saudacao(period: str) -> str:
+    """Espelha a saudação: "Bom dia, Ana." com JARVIS_NOME; sem nome, o tratamento ("Bom dia, senhor.", "Bom dia.")."""
+    if config.NOME:
+        return f"{SAUDACOES[period]}, {config.NOME}."
+    return fillers.trat(f"{SAUDACOES[period]}, senhor.")
+
+
 def route_one(text: str) -> Route | None:
+    if r := _greeting_route(text):
+        return r
     t = normalize(text)
     if not t:
         return None

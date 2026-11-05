@@ -4,14 +4,15 @@ import { useMemo, useRef } from 'react'
 import * as THREE from 'three'
 import { useJarvis } from '../store'
 import type { Phase } from '../types'
-import { PHASE_COLOR } from './ui'
+import { C, PHASE_COLOR, resolveToken } from './ui'
 
 const R = 1.2
 
 const SPEED: Record<Phase, number> = { idle: 0.12, listening: 0.22, thinking: 0.7, tooling: 0.5, speaking: 0.28 }
 const GLOW: Record<Phase, number> = { idle: 0.55, listening: 0.95, thinking: 0.8, tooling: 0.8, speaking: 0.85 }
 const TARGET = Object.fromEntries(
-  Object.entries(PHASE_COLOR).map(([k, v]) => [k, new THREE.Color(v)]),
+  // o WebGL não lê var(--…): resolve os tokens do design system uma vez (o CSS já carregou, o globo é lazy)
+  Object.entries(PHASE_COLOR).map(([k, v]) => [k, new THREE.Color(resolveToken(v))]),
 ) as Record<Phase, THREE.Color>
 
 /** Ponto em coordenadas esféricas (lat/lon em graus). */
@@ -76,7 +77,7 @@ function CoreScene() {
   const baseRing = useRef<THREE.Group>(null!)
   const dust = useRef<THREE.Points>(null!)
 
-  const state = useRef({ color: new THREE.Color(PHASE_COLOR.idle), speed: SPEED.idle, glow: GLOW.idle, level: 0 })
+  const state = useRef({ color: new THREE.Color(resolveToken(PHASE_COLOR.idle)), speed: SPEED.idle, glow: GLOW.idle, level: 0 })
   // Reduzir Movimento: a cor ainda acompanha a fase, mas nada gira nem pulsa (o valor muda ao vivo)
   const still = useRef(false)
   still.current = useReducedMotion() ?? false
@@ -161,7 +162,7 @@ function CoreScene() {
       new THREE.ShaderMaterial({
         vertexShader: atmosphereVert,
         fragmentShader: atmosphereFrag,
-        uniforms: { uColor: { value: new THREE.Color(PHASE_COLOR.idle) }, uIntensity: { value: 0.6 } },
+        uniforms: { uColor: { value: new THREE.Color(resolveToken(PHASE_COLOR.idle)) }, uIntensity: { value: 0.6 } },
         transparent: true,
         blending: THREE.AdditiveBlending,
         side: THREE.BackSide,
@@ -182,7 +183,7 @@ function CoreScene() {
       node: new THREE.PointsMaterial({ ...base, size: 0.05, map: tex, opacity: 0.9 }),
       hub: new THREE.PointsMaterial({ ...base, size: 0.16, map: tex, opacity: 1 }),
       dust: new THREE.PointsMaterial({ ...base, size: 0.03, map: tex, opacity: 0.6 }),
-      sat: new THREE.MeshBasicMaterial({ color: '#e0fbff' }),
+      sat: new THREE.MeshBasicMaterial({ color: resolveToken(C.text) }),
       satGlow: new THREE.SpriteMaterial({ ...base, map: tex, opacity: 0.9 }),
       core: new THREE.MeshBasicMaterial({ ...base, opacity: 0.06 }),
       disc: new THREE.MeshBasicMaterial({ ...base, map: tex, opacity: 0.35 }),

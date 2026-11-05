@@ -16,7 +16,8 @@ Só leitura: não altere arquivos, não reinstale e não encerre processos sem a
 5. **Dependências:** `uv sync --locked` termina sem erro.
 6. **Login do Claude:** `uv run jarvis --text "diga apenas ok"` devolve uma frase. Avise que isso usa um turno da assinatura.
 7. **Voz:** `say -v '?' | grep -i "${JARVIS_VOICE:-Luciana}"`.
-8. **Ícone do Dock:** se `~/Applications/Jarvis.app` existe, `osadecompile ~/Applications/Jarvis.app/Contents/Resources/Scripts/main.scpt | grep "cd "` aponta para esta pasta.
+8. **Localização:** se `JARVIS_LOCATION` está vazia e `JARVIS_LOCAL_PRECISO` não é `0`, `uv run python -c "from jarvis.mac import location; print(location.current() is not None)"` devolve `True`. Não mostre coordenadas.
+9. **Ícone do Dock:** se `~/Applications/Jarvis.app` existe, `osadecompile ~/Applications/Jarvis.app/Contents/Resources/Scripts/main.scpt | grep "cd "` aponta para esta pasta.
 
 As permissões do macOS não podem ser lidas daqui. Pergunte o que a pessoa vê e use a tabela.
 
@@ -35,6 +36,8 @@ As permissões do macOS não podem ser lidas daqui. Pergunte o que a pessoa vê 
 | Primeira abertura demora minutos | o Whisper está baixando o modelo (~460 MB no `small`) | esperar; só acontece uma vez |
 | A agenda demora ou fica "sendo lida" | o Calendário do macOS leva até ~50 s em agendas grandes | esperar; a leitura roda em segundo plano |
 | Diz que não encontrou o arquivo | o CSV está fora das pastas de `JARVIS_PASTAS_DADOS` (até três níveis abaixo) | mover o arquivo, arrastar para o painel ou acrescentar a pasta no `.env` |
+| O Local mostra outra cidade com "(aprox.)" | a localização do Mac está negada ou o app auxiliar não compilou; ficou a cidade do IP | Ajustes › Privacidade e Segurança › Serviços de Localização › Jarvis Localização; sem `swiftc`, `xcode-select --install`; ou pôr a cidade em `JARVIS_LOCATION` |
+| Fala com a voz do macOS e o feed diz "ElevenLabs recusou a fala" | o texto do aviso diz o motivo: `402 paid_plan_required` é voz da Voice Library no plano gratuito; `401` é chave inválida | trocar `JARVIS_ELEVEN_VOICE_ID` por uma voz padrão (ou assinar um plano); refazer a chave |
 | A análise profunda não abre | plugin `analise-dados` não instalado | `/instalar`, passo 6 |
 
 Termine com a causa mais provável em uma frase e o próximo passo.

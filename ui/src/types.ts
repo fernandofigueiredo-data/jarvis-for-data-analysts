@@ -30,6 +30,8 @@ export interface Telemetry {
   network: string
   weather?: { tempC: number; desc: string }
   location?: string
+  locationApprox?: boolean // true = cidade pelo IP (aproximada); false = localização do Mac ou do navegador
+  locationAsk?: boolean // o daemon quer a posição do navegador (sem a do Mac e com JARVIS_LOCAL_PRECISO ligado)
 }
 
 export interface Agent {
@@ -139,3 +141,4 @@ export type ClientMessage =
   | { type: 'ptt'; down: boolean }
   | { type: 'say'; text: string }
   | { type: 'command'; id: string }
+  | { type: 'location'; lat: number; lon: number; accuracy: number }

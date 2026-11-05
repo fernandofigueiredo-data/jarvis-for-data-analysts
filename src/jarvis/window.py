@@ -14,5 +14,5 @@ def open_window(url: str) -> None:
         except Exception:
             time.sleep(0.1)
     webview.create_window("J.A.R.V.I.S.", url, width=1280, height=760, min_size=(900, 600),
-                          background_color="#050b16")
+                          background_color="#101522")  # Navy do design system, até o painel carregar
     webview.start()

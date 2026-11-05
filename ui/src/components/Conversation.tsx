@@ -6,16 +6,17 @@ import type { TranscriptLine } from '../types'
 function Line({ line, old = false }: { line: TranscriptLine; old?: boolean }) {
   const user = line.role === 'user'
   return (
-    <li className={`flex flex-col gap-0.5 ${user ? 'items-end' : 'items-start'}`}>
-      <span className="text-[10px] font-semibold tracking-[0.14em] text-slate-400 uppercase">{user ? 'Você' : 'Jarvis'}</span>
-      {/* conversas antigas ficam mais apagadas só no balão: os rótulos mantêm o contraste */}
+    <li className={`flex flex-col gap-1 ${user ? 'items-end' : 'items-start'}`}>
+      <span className="text-xs font-medium tracking-[0.08em] text-text-secondary uppercase">{user ? 'Você' : 'Jarvis'}</span>
+      {/* conversas antigas ficam mais apagadas só no balão: os rótulos mantêm o contraste.
+          O que o modelo escreveu leva a borda-esquerda Roxa (§12): "isto o modelo escreveu" × "isto você escreveu" */}
       <span
-        className={`max-w-[92%] rounded-lg px-2.5 py-1.5 text-[12.5px] leading-snug whitespace-pre-wrap ${
-          user ? 'bg-cyan-400/10 text-cyan-50' : 'border border-cyan-400/15 bg-slate-900/40 text-cyan-100'
+        className={`max-w-[92%] rounded-base px-3 py-2 text-sm leading-snug whitespace-pre-wrap text-text-primary ${
+          user ? 'border border-text-secondary/30' : 'border border-text-secondary/30 border-l-2 border-l-data'
         } ${old ? 'opacity-75' : ''}`}
       >
         {line.text}
-        {!line.final && <span className="blink ml-0.5 text-cyan-300">▍</span>}
+        {!line.final && <span className="blink ml-1 text-primary">▍</span>}
       </span>
     </li>
   )
@@ -39,17 +40,17 @@ export default function Conversation() {
 
   if (!open) return null
   return (
-    // o posicionamento fica num invólucro: o .glass (fora das camadas do Tailwind) força position: relative
-    <div className="absolute bottom-[calc(100%+10px)] left-1/2 z-30 w-[min(560px,calc(100vw-24px))] -translate-x-1/2">
+    // o posicionamento fica num invólucro: o .card (fora das camadas do Tailwind) força position: relative
+    <div className="absolute bottom-[calc(100%+8px)] left-1/2 z-30 w-[min(560px,calc(100vw-24px))] -translate-x-1/2">
       <section
         id="conversa"
         aria-label="Conversa"
         tabIndex={-1}
         onKeyDown={(e) => e.key === 'Escape' && close()}
-        className="glass glass-solid flex max-h-[min(46vh,420px)] flex-col p-3 focus:outline-none"
+        className="card card-raised flex max-h-[min(46vh,420px)] flex-col p-4 focus:outline-none"
       >
         <header className="mb-2 flex shrink-0 items-center justify-between">
-          <h2 className="card-title flex items-center gap-1.5">
+          <h2 className="card-title flex items-center gap-2">
             <MessagesSquare size={12} /> Conversa
           </h2>
           <button tabIndex={0} onClick={close} aria-label="Fechar conversa" className="icon-btn">
@@ -61,21 +62,21 @@ export default function Conversation() {
             <Line key={`h${i}`} line={l} old />
           ))}
           {history.length > 0 && transcript.length > 0 && (
-            <li role="separator" className="my-1 flex items-center gap-2 text-[10px] tracking-[0.16em] text-slate-400 uppercase">
-              <span className="flex-1 border-t border-cyan-400/15" /> Agora <span className="flex-1 border-t border-cyan-400/15" />
+            <li role="separator" className="my-1 flex items-center gap-2 text-xs tracking-[0.08em] text-text-secondary uppercase">
+              <span className="flex-1 border-t border-text-secondary/30" /> Agora <span className="flex-1 border-t border-text-secondary/30" />
             </li>
           )}
           {transcript.map((l, i) => (
             <Line key={`t${i}`} line={l} />
           ))}
           {waiting && (
-            <li className="flex items-center gap-1.5 text-[11.5px] text-slate-400">
-              <span className="blink inline-block h-1.5 w-1.5 rounded-full bg-violet-400" />
+            <li className="flex items-center gap-2 text-xs text-text-secondary">
+              <span className="blink inline-block h-2 w-2 rounded-full bg-data" />
               {phase === 'tooling' ? 'Jarvis está consultando uma ferramenta…' : 'Jarvis está pensando…'}
             </li>
           )}
           {history.length === 0 && transcript.length === 0 && (
-            <li className="py-4 text-center text-[11.5px] text-slate-400">
+            <li className="py-4 text-center text-xs text-text-secondary">
               Pergunte pelo campo abaixo, pelo ⌘K ou dizendo “Ei Jarvis”.
             </li>
           )}

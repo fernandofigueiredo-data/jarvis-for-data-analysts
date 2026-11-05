@@ -20,10 +20,13 @@ export function Card({
     <section
       id={id}
       tabIndex={id ? -1 : undefined}
-      className={`glass flex min-h-0 min-w-0 flex-col p-3 focus:outline-none ${className}`}
+      className={`card flex min-h-0 min-w-0 flex-col p-6 focus:outline-none ${className}`}
     >
       <header className="mb-2 flex shrink-0 items-center justify-between gap-2">
-        <h2 className="card-title">{title}</h2>
+        {/* cartão estreito (tablet): o título cede espaço com reticências, o selo da direita fica dentro */}
+        <h2 className="card-title min-w-0 truncate" title={title}>
+          {title}
+        </h2>
         {right}
       </header>
       <div className={`min-h-0 flex-1 ${bodyClassName}`}>{children}</div>
@@ -61,7 +64,7 @@ export function Popover({
     }
   }, [open, onClose])
   if (!open) return null
-  // o .glass (fora das camadas do Tailwind) força position: relative, então ele fica por dentro do diálogo
+  // o .card (fora das camadas do Tailwind) força position: relative, então ele fica por dentro do diálogo
   return (
     <div
       ref={box}
@@ -72,7 +75,7 @@ export function Popover({
         align === 'left' ? 'left-0' : 'right-0'
       }`}
     >
-      <div className="glass glass-solid p-3">
+      <div className="card card-raised p-4">
         <div className="card-title mb-2">{label}</div>
         {children}
       </div>
@@ -93,20 +96,46 @@ export function spotlight(el: HTMLElement | null) {
   el.addEventListener('animationend', () => el.classList.remove('spotlight'), { once: true })
 }
 
+/** Cores do design system como valores CSS (para style e SVG). Cada acento tem uma pergunta só (§1):
+ *  primary "onde eu clico", success "isso funcionou / rodando", data "isso é dado ou modelo", warning "atenção". */
+export const C = {
+  base: 'var(--color-bg-base)',
+  surface: 'var(--color-bg-surface)',
+  raised: 'var(--color-bg-surface-raised)',
+  primary: 'var(--color-accent-primary)',
+  success: 'var(--color-accent-success)',
+  data: 'var(--color-accent-data)',
+  warning: 'var(--color-accent-warning)',
+  text: 'var(--color-text-primary)',
+  muted: 'var(--color-text-secondary)',
+} as const
+
+/** Valor resolvido de um token (o WebGL do globo não entende var(--…)). */
+export function resolveToken(value: string) {
+  const name = value.match(/var\((--[\w-]+)\)/)?.[1]
+  return name ? getComputedStyle(document.documentElement).getPropertyValue(name).trim() : value
+}
+
+/** Cor com transparência a partir de um token: alpha(C.primary, 30) */
+export const alpha = (color: string, pct: number) => `color-mix(in oklab, ${color} ${pct}%, transparent)`
+
+// §6 Badge: fundo do acento a 15%, texto no acento sólido, borda 1px no acento a 30%. Não há vermelho no sistema:
+// erro e atenção usam o Âmbar (§7).
 const TONES = {
-  cyan: 'text-cyan-300 border-cyan-400/30 bg-cyan-400/10',
-  green: 'text-emerald-300 border-emerald-400/30 bg-emerald-400/10',
-  amber: 'text-amber-300 border-amber-400/30 bg-amber-400/10',
-  violet: 'text-violet-300 border-violet-400/30 bg-violet-400/10',
-  red: 'text-rose-300 border-rose-400/30 bg-rose-400/10',
-  gray: 'text-slate-400 border-slate-500/25 bg-slate-500/10',
+  cyan: 'text-primary border-primary/30 bg-primary/15',
+  green: 'text-success border-success/30 bg-success/15',
+  amber: 'text-warning border-warning/30 bg-warning/15',
+  // Roxo é exceção: o fundo a 15% clareia a base e o texto cai para 4,25:1 (abaixo de AA, §2). Sem o fundo,
+  // Roxo sobre Grafite dá 5,23:1. Use só sobre a camada 2: sobre o Grafite secundário o Roxo não vira texto pequeno.
+  violet: 'text-data border-data/30',
+  gray: 'text-text-secondary border-text-secondary/30 bg-text-secondary/15',
 } as const
 export type Tone = keyof typeof TONES
 
 export function Chip({ tone = 'cyan', children, className = '' }: { tone?: Tone; children: ReactNode; className?: string }) {
   return (
     <span
-      className={`inline-flex shrink-0 items-center gap-1 rounded-[5px] border px-1.5 py-[1px] text-[10px] font-semibold uppercase tracking-[0.12em] ${TONES[tone]} ${className}`}
+      className={`inline-flex shrink-0 items-center gap-1 rounded-base border px-2 text-xs font-medium uppercase tracking-[0.08em] ${TONES[tone]} ${className}`}
     >
       {children}
     </span>
@@ -114,14 +143,7 @@ export function Chip({ tone = 'cyan', children, className = '' }: { tone?: Tone;
 }
 
 export function Dot({ tone = 'green', pulse = false }: { tone?: Tone; pulse?: boolean }) {
-  const color = {
-    cyan: 'bg-cyan-400 shadow-[0_0_8px_#22d3ee]',
-    green: 'bg-emerald-400 shadow-[0_0_8px_#34d399]',
-    amber: 'bg-amber-400 shadow-[0_0_8px_#fbbf24]',
-    violet: 'bg-violet-400 shadow-[0_0_8px_#a78bfa]',
-    red: 'bg-rose-400 shadow-[0_0_8px_#f87171]',
-    gray: 'bg-slate-500',
-  }[tone]
+  const color = { cyan: 'bg-primary', green: 'bg-success', amber: 'bg-warning', violet: 'bg-data', gray: 'bg-text-secondary' }[tone]
   return <span className={`inline-block h-1.5 w-1.5 shrink-0 rounded-full ${color} ${pulse ? 'blink' : ''}`} />
 }
 
@@ -133,7 +155,7 @@ export function Waveform({
   active = true,
   amp = 1,
   height = 24,
-  color = '#22d3ee',
+  color = C.primary,
   className = '',
   barWidth = 2,
   gap = 2,
@@ -166,7 +188,6 @@ export function Waveform({
                 width: barWidth,
                 height: `${Math.max(12, envelope * scale * 100)}%`,
                 background: color,
-                boxShadow: `0 0 6px ${color}`,
                 opacity: active ? 0.95 : 0.45,
                 transition: 'height 120ms linear',
                 '--d': `${0.7 * seed + 0.35}s`,
@@ -188,12 +209,13 @@ export const PHASE_LABEL: Record<Phase, string> = {
   speaking: 'Falando…',
 }
 
+// em espera = neutro; ouvindo = sua vez de agir (Ciano); pensando e falando = o modelo (Roxo); ferramenta = execução (Verde)
 export const PHASE_COLOR: Record<Phase, string> = {
-  idle: '#22d3ee',
-  listening: '#67e8f9',
-  thinking: '#a78bfa',
-  tooling: '#fbbf24',
-  speaking: '#5eead4',
+  idle: C.muted,
+  listening: C.primary,
+  thinking: C.data,
+  tooling: C.success,
+  speaking: C.data,
 }
 
 export function formatInt(n: number) {

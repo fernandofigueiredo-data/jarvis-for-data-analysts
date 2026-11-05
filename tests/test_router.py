@@ -57,3 +57,35 @@ def test_mute_speaks_first():
 ])
 def test_falls_through_to_claude(text):
     assert route(text) is None
+
+
+@pytest.mark.parametrize("text,reply", [
+    ("bom dia, Jarvis", "Bom dia, Ana."),
+    ("Boa tarde Jarvis", "Boa tarde, Ana."),
+    ("BOA NOITE, JARVIS!", "Boa noite, Ana."),
+    ("bom tarde, jarvis", "Boa tarde, Ana."),
+    ("Bom dia, Jarbas.", "Bom dia, Ana."),  # como o Whisper às vezes escreve o nome
+])
+def test_greeting_mirrors_and_reads_agenda(monkeypatch, text, reply):
+    from jarvis import agenda, config
+    monkeypatch.setattr(config, "NOME", "Ana")
+    monkeypatch.setattr(agenda, "resumo_hoje", lambda: "Hoje você tem: 09:00, Daily.")
+    r = route(text)
+    assert r and r[0].name == "greeting"
+    assert r[0].run() == f"{reply} Hoje você tem: 09:00, Daily."
+
+
+@pytest.mark.parametrize("tratamento,reply", [("senhor", "Bom dia, senhor."), ("senhora", "Bom dia, senhora."),
+                                              ("nenhum", "Bom dia.")])
+def test_greeting_without_name_uses_the_form_of_address(monkeypatch, tratamento, reply):
+    from jarvis import config
+    from jarvis.router import saudacao
+    monkeypatch.setattr(config, "NOME", "")
+    monkeypatch.setattr(config, "TRATAMENTO", tratamento)
+    assert saudacao("dia") == reply
+
+
+@pytest.mark.parametrize("text", ["bom dia", "bom dia, Jarvis, abre o Chrome", "tenha um bom dia, Jarvis"])
+def test_greeting_needs_the_whole_phrase(text):
+    r = route(text)
+    assert not r or r[0].name != "greeting"

@@ -16,10 +16,12 @@ from jarvis.memory import memory
 if TYPE_CHECKING:
     from jarvis.app import Jarvis
 
+# cores e fontes do design system (o painel compilado as tem em ui/src/index.css)
 PLACEHOLDER = """<!doctype html><meta charset=utf-8><title>Jarvis</title>
-<body style="background:#050b16;color:#7dd3fc;font:16px system-ui;padding:40px">
-<h1>J.A.R.V.I.S.</h1><p>O painel ainda não foi compilado. Rode <code>cd ui && npm run build</code>.</p>
-<pre id=log style="color:#94a3b8"></pre><script>
+<body style="background:#101522;color:#f2f7ff;font:16px Inter,-apple-system,system-ui,sans-serif;padding:48px">
+<h1 style="font-weight:600">J.A.R.V.I.S.</h1><p>O painel ainda não foi compilado. Rode
+<code style="font-family:'JetBrains Mono',ui-monospace,monospace;color:#39ff88">cd ui && npm run build</code>.</p>
+<pre id=log style="color:#aab8cc;font-family:'JetBrains Mono',ui-monospace,monospace"></pre><script>
 const ws=new WebSocket(`ws://${location.host}/ws`);ws.onmessage=e=>{const m=JSON.parse(e.data);
 if(m.type!=='telemetry')log.textContent=JSON.stringify(m).slice(0,300)+'\\n'+log.textContent.slice(0,5000)}
 </script>"""

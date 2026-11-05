@@ -33,3 +33,20 @@ def test_fetch_timeout_is_none(monkeypatch):
         raise subprocess.TimeoutExpired("osascript", 1)
     monkeypatch.setattr(agenda.subprocess, "run", slow)
     assert agenda.fetch(timeout=1) is None
+
+
+def test_resumo_em_ordem_com_horario_e_titulo(cache):
+    hoje = datetime.now().astimezone().replace(second=0, microsecond=0)
+    at = lambda h, m=0: hoje.replace(hour=h, minute=m).isoformat()  # noqa: E731
+    cache([{"title": "Dentista", "start": at(14, 30), "end": at(15), "allDay": False},
+           {"title": "Daily", "start": at(9), "end": at(9, 15), "allDay": False}])
+    assert agenda.resumo_hoje() == "Hoje você tem: 09:00, Daily; 14:30, Dentista."
+
+
+def test_resumo_sem_compromissos(cache):
+    cache([])
+    assert agenda.resumo_hoje() == "Não há compromissos na sua agenda hoje."
+
+
+def test_resumo_agenda_inacessivel(cache):
+    assert agenda.resumo_hoje(wait=0) == "Não consegui acessar sua agenda agora."
